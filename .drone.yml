@@ -1,0 +1,30 @@
+cache:
+  mount:
+    - node_modules
+    - .git
+
+build:
+  main:
+    image: mhart/alpine-node:4.5
+    commands:
+      - npm install
+      - node_modules/.bin/gulp test
+    
+publish:
+  docker:
+    username: bsimpson53
+    email: $$DOCKER_EMAIL
+    password: $$DOCKER_PASSWORD
+    repo: newcrossfoodcoop/nxfc_base
+    tag: latest
+    when:
+      branch: master
+      
+  docker:
+    username: bsimpson53
+    email: $$DOCKER_EMAIL
+    password: $$DOCKER_PASSWORD
+    repo: newcrossfoodcoop/nxfc_base
+    tag: $$TAG
+    when:
+      event: tag
