@@ -27,7 +27,7 @@
     "glob": "^7.0.6",
     "lodash": "^4.16.4",
     "mongoose": "^4.6.4",
-    "morgan": "^1.7.0",
+    "morgan": "^1.7.0"
   },
   "devDependencies": {
     "abao": "0.4.0",
@@ -42,7 +42,7 @@
     "gulp-raml2html": "^0.2.0",
     "jshint": "^2.9.3",
     "raml2code": "^1.8.4",
-    "raml2code-js-client-mulesoft": "0.0.4"
+    "raml2code-js-client-mulesoft": "0.0.4",
     "raml-parser": "^0.8.18",
     "run-sequence": "^1.2.2"
   }
