@@ -6,6 +6,8 @@ var util = require('util'),
     Order = mongoose.model('Order'),
     async = require('async'),
     _ = require('lodash');
+    
+var path = require('path');
 
 var plugins = {
     'local-psp': require(path.resolve('./depends/psp-local')),
@@ -15,16 +17,20 @@ var plugins = {
 function getSubController(method) {
     if (plugins[method]) return plugins[method];
     throw new Error('unrecognised method: ' + method);
-};
+}
 
 function getActive() {
-    return _.map(active, function(psp) {
-        return {
-            name: psp.name,
-            buttonImageUrl: psp.buttonImageUrl
-        };
-    });
-};
+    return _(plugins)
+        .mapValues(function(psp) {
+            return {
+                name: psp.name,
+                buttonImageUrl: psp.buttonImageUrl,
+                active: psp.active
+            };
+        })
+        .filter('active')
+        .valueOf();
+}
 
 exports.start = function(req, res) {
     

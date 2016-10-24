@@ -1,3 +1,5 @@
+'use strict';
+
 var gulp = require('gulp');
 var path = require('path');
 var raml2html = require('gulp-raml2html');

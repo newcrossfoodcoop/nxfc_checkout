@@ -10,11 +10,12 @@ var _config = require('config');
 var lib = require(path.resolve('./lib/config'));
 
 var myDefaultConfigs = {
+    active: true,
     name: 'local-psp',
     plugin: 'localPSP',
     returnUrl : defer(function() {
         return 'http://' + this.externalHost + '/checkout/local-psp/%s/redirected';
-    }
+    })
 };
 
 lib.processConfig({
@@ -27,7 +28,7 @@ var mongoose = require('mongoose'),
 
 module.exports = function() {
 
-    var config = _config.depends.psp-local;
+    var config = _config.depends['psp-local'];
 
     exports.initiatePayment = function initiatePayment(order, callback) {
 

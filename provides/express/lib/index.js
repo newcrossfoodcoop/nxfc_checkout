@@ -10,6 +10,7 @@ var express = require('express'),
 	path = require('path');
 
 var glob = require('glob');
+var config = require('config');
 
 /**
  * Initialize local variables
@@ -57,7 +58,7 @@ module.exports.initMiddleware = function (app) {
  */
 module.exports.initProvidesRoutes = function (app) {
 	// Globbing routing files
-	glob(config.lib.express.routes).forEach(function(routePath) {
+	glob(config.provides.express.routes).forEach(function(routePath) {
 		require(path.resolve(routePath))(app);
 	});
 };

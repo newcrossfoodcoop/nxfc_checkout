@@ -48,7 +48,7 @@ exports.loadModels = function() {
 // Initialize Mongoose
 exports.connect = function(cb) {
 	var _this = this;
-    var url = config.depends.mongoose.href
+    var url = config.depends.mongoose.href;
 	mongoose.connect(url, function (err) {
 		// Log Error
 		if (err) {

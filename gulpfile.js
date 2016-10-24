@@ -15,6 +15,7 @@ var config = require('config');
 var util = require('util');
 
 var path = require('path');
+var ramlParser = require('raml-parser');
 
 // Set NODE_ENV to 'test'
 gulp.task('env:test', function () {
@@ -64,7 +65,7 @@ gulp.task('node', function () {
 
 // JS linting task
 gulp.task('jshint', function () {
-	return gulp.src(['!**/node_modules/**/*.js', '**/*.js'])
+	return gulp.src(['!**/node_modules/**/*.js', '!**/build/**/*.js', '**/*.js'])
 		.pipe(plugins.jshint())
 		.pipe(plugins.jshint.reporter('default'))
 		.pipe(plugins.jshint.reporter('fail'));
@@ -72,30 +73,23 @@ gulp.task('jshint', function () {
 
 // RAML linting task
 gulp.task('ramllint', function() {
-  gulp.src(['!**/node_modules/**/*.raml', '**/*.raml'])
-    .pipe(plugins.raml())
-    .pipe(plugins.raml.reporter('default'))
-    .pipe(plugins.raml.reporter('fail'));
+    return gulp.src(['!**/node_modules/**/*.raml', '**/*.raml', ])
+        .pipe(plugins.fn(function (file) {
+            ramlParser.loadFile(file.path).then( function(data) {
+                console.log(chalk.green('OK:  '), data.title);
+            }, function(error) {
+                console.log(chalk.red('ERR: '), file.path, ' ', error);
+            });
+        }));
 });
 
 // Mocha tests task
-gulp.task('mocha', function (done) {
-	var error;
-
-	// Run the tests
-	gulp.src(['!**/node_modules/**/*.js', '**/tests/mocha/*.js'])
+gulp.task('mocha', function () {
+	return gulp.src(['!**/node_modules/**/*.js', '**/tests/mocha/*.js'])
 		.pipe(plugins.mocha({
 			reporter: 'spec',
 			timeout: 4000
-		}))
-		.on('error', function (err) {
-			// If an error occurs, save it
-			error = err;
-		})
-		.on('end', function() {
-			done(error);
-		});
-
+		}));
 });
 
 // Run the project linting

@@ -24,13 +24,13 @@ module.exports = {
         'psp-paypal-rest': {
             externalHost: defer(function() {
                 var cfg = this;
-                return cfg.provides.express.externalUrl.host
+                return cfg.provides.express.externalUrl.host;
             }) 
         },
         'psp-local': {
             externalHost: defer(function() {
                 var cfg = this;
-                return cfg.provides.express.externalUrl.host
+                return cfg.provides.express.externalUrl.host;
             }) 
         }, 
     },

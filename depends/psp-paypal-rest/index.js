@@ -12,6 +12,7 @@ var defer = require('config/defer').deferConfig;
 var lib = require(path.resolve('./lib/config'));
 
 var myDefaultConfigs = {
+    active: false,
     name: 'paypal-rest-sandbox',
     plugin: 'paypal-rest',
     mode: 'sandbox',
@@ -19,11 +20,11 @@ var myDefaultConfigs = {
     clientSecret: 'PAYPAL_REST_CLIENTSECRET',
     returnUrl : defer(function() {
         return 'http://' + this.externalHost + '/checkout/paypal-rest/%s/redirected';
-    },
+    }),
     cancelUrl : defer(function() {
         return 'http://' + this.externalHost + '/checkout/paypal-rest/%s/cancelled';
-    },
-    buttonImageUrl: 'https://www.paypal.com/en_GB/GB/i/btn/btn_xpressCheckout.gif'
+    }),
+    buttonImageUrl: 'https://www.paypal.com/en_GB/GB/i/btn/btn_xpressCheckout.gif',
     env: {
         clientID: 'PAYPAL_REST_CLIENTID',
         clientSecret: 'PAYPAL_REST_CLIENTSECRET'
@@ -36,7 +37,7 @@ lib.processConfig({
 });
 
 module.exports = function() {
-    var config = _config.depends.psp-paypal-rest;
+    var config = _config.depends['psp-paypal-rest'];
 
     paypal.configure({
       'mode': config.mode,
