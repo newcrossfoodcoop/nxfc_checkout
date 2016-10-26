@@ -40,7 +40,7 @@ gulp.task('env:stage', function () {
 // Nodemon task
 gulp.task('nodemon', function () {
 	return plugins.nodemon({
-		script: 'server.js',
+		script: 'provides/express',
 		nodeArgs: ['--debug'],
 		ext: 'js,html',
 		watch: _.union([])
@@ -48,7 +48,7 @@ gulp.task('nodemon', function () {
 });
 
 gulp.task('node', function () {
-    var nodeArgs = ['server.js'];
+    var nodeArgs = ['provides/express'];
     var spawn = require('child_process').spawn;
     console.log(args);
     
@@ -104,7 +104,7 @@ gulp.task('test', function(done) {
 
 // Run the project in development mode
 gulp.task('default', function(done) {
-	runSequence('env:dev', 'lint', 'nodemon', done);
+	runSequence('env:dev', 'lint', 'build', 'nodemon', done);
 });
 
 // Run the project in production mode
@@ -125,17 +125,23 @@ gulp.task('loadModuleTasks', function () {
         }));
 });
 
-gulp.task('build', ['loadModuleTasks'], function(done) {
-    var tasks = _(gulp.tasks)
-        .keys()
-        .filter(function (key) { return /^build\:/.test(key); })
-        .valueOf();
-    
-    if (tasks.length) {   
-        runSequence(tasks,done);
-    }
-    else {
-        console.log(chalk.yellow('No build tasks found'));
-        done();
-    }
-});
+function runMatchingSequence(regex) {
+    return function(done) {
+        var tasks = _(gulp.tasks)
+            .keys()
+            .filter(function (key) { return regex.test(key); })
+            .valueOf();
+        
+        if (tasks.length) {   
+            runSequence(tasks,done);
+        }
+        else {
+            console.log(chalk.yellow('No matching tasks found: '),regex);
+            done();
+        }
+    };
+}
+
+gulp.task('build', ['loadModuleTasks'], runMatchingSequence(/^build\:/));
+
+
