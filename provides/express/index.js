@@ -6,30 +6,9 @@ var config = require('config');
 var express = require('./lib');
 var mongoose = require(path.resolve('./depends/mongoose'));
 
-var lib = require(path.resolve('./lib/config'));
-
-var myDefaultConfigs = {
-    port: 8080,
-    routes: path.resolve(__dirname,'./routes'),
-    _externalUrl: lib.deferredSetUrl('externalUrl'),
-    externalUrl: {
-        protocol: 'http',
-        slashes: true,
-        hostname: 'localhost',
-        port: 8080
-    },
-    env: {
-        port: 'EXPRESS_PORT'
-    }
-};
-
-lib.processConfig({
-    moduleGroup: 'provides',
-    module: 'express',
-    defaultConfig: myDefaultConfigs
-});
-
-mongoose.connect(function (db) {
+mongoose.connect(function (err, db) {
+    if (err) { throw err; }
+    
     var app = express.init();
 
 	// Start the app by listening on <port>

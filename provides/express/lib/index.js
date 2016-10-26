@@ -11,6 +11,30 @@ var express = require('express'),
 
 var glob = require('glob');
 var config = require('config');
+var debug = require('debug')('provides:express');
+
+var lib = require(path.resolve('./lib/config'));
+
+var myDefaultConfigs = {
+    port: 8080,
+    routes: path.resolve(__dirname, '../routes/**/*.js'),
+    _externalUrl: lib.deferredSetUrl('externalUrl'),
+    externalUrl: {
+        protocol: 'http',
+        slashes: true,
+        hostname: 'localhost',
+        port: 8080
+    },
+    env: {
+        port: 'EXPRESS_PORT'
+    }
+};
+
+lib.processConfig({
+    moduleGroup: 'provides',
+    module: 'express',
+    defaultConfig: myDefaultConfigs
+});
 
 /**
  * Initialize local variables
@@ -58,9 +82,11 @@ module.exports.initMiddleware = function (app) {
  */
 module.exports.initProvidesRoutes = function (app) {
 	// Globbing routing files
-	glob(config.provides.express.routes).forEach(function(routePath) {
-		require(path.resolve(routePath))(app);
-	});
+	glob.sync(config.provides.express.routes)
+	    .forEach(function(file) {
+	        debug('loading route: ',file);
+		    require(path.resolve(file))(app);
+		});
 };
 
 /**
