@@ -83,7 +83,7 @@ exports.delete = function(req, res) {
 /**
  * List of Orders (not deleted ones)
  */
-exports.list = function(req, res) { 
+exports.list = function(req, res) {
     Order.find({state: { $ne: 'deleted' }}).sort('-created')
         //.populate('user', 'displayName')
         .exec(function(err, orders) {

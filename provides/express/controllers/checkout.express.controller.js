@@ -8,10 +8,11 @@ var util = require('util'),
     _ = require('lodash');
     
 var path = require('path');
+var config = require('config');
 
 var plugins = {
-    'local-psp': require(path.resolve('./depends/psp-local')),
-    'paypal-rest': require(path.resolve('./depends/psp-paypal-rest'))
+    'local-psp': require(path.resolve('./depends/psp-local'))(),
+    'paypal-rest': require(path.resolve('./depends/psp-paypal-rest'))()
 };
 
 function getSubController(method) {
@@ -21,11 +22,12 @@ function getSubController(method) {
 
 function getActive() {
     return _(plugins)
-        .mapValues(function(psp) {
+        .values()
+        .map(function(psp) {
             return {
-                name: psp.name,
-                buttonImageUrl: psp.buttonImageUrl,
-                active: psp.active
+                name: psp.cfg.name,
+                buttonImageUrl: psp.cfg.buttonImageUrl,
+                active: psp.cfg.active
             };
         })
         .filter('active')
@@ -35,7 +37,7 @@ function getActive() {
 exports.start = function(req, res) {
     
     var order = new Order(req.body);
-    order.user = req.user;
+    order.user = req.user = req.body.user;
     
     console.log(order);
 
@@ -183,7 +185,7 @@ exports.cancelled = function(req, res) {
     function(err,result) {
         if (err) { console.error(err); }
         if (result) { return res.jsonp(result); }
-        return res.send(400, err);
+        return res.status(400).jsonp(err);
     });
 };
 
