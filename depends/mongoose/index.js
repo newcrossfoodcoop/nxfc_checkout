@@ -40,16 +40,17 @@ lib.processConfig({
 // Load the mongoose models
 exports.loadModels = function() {
 	// Globbing model files
-	glob(config.depends.mongoose.models, function(modelPath) {
-		require(path.resolve(modelPath));
-	});
+	glob.sync(config.depends.mongoose.models)
+	    .forEach(function(file) {
+		    require(path.resolve(file));
+		});
 };
 
 // Initialize Mongoose
 exports.connect = function(cb) {
 	var _this = this;
     var url = config.depends.mongoose.href;
-	mongoose.connect(url, function (err) {
+	mongoose.connect(url, function (err, db) {
 		// Log Error
 		if (err) {
 			console.error(chalk.red('Could not connect to MongoDB!'));
@@ -60,7 +61,7 @@ exports.connect = function(cb) {
 			_this.loadModels();
 
 			// Call callback FN
-			cb();
+			cb(null, db);
 		}
 	});
 };

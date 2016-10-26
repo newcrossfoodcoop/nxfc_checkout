@@ -7,9 +7,11 @@ var _ = require('lodash');
  */
 var mongoose = require('mongoose'),
 	Schema = mongoose.Schema;
+
+var debug = require('debug')('depends:mongoose');
 	
 var path = require('path');
-var productsApi = require(path.resolve('./lib/depends/catalogue')).api.resources.products;
+var productsApi = require(path.resolve('./depends/catalogue')).api.resources.products;
 
 var OrderItemSchema = new Schema({
     _product: { type: Schema.Types.ObjectId, ref: 'Product' },
@@ -65,7 +67,8 @@ var OrderSchema = new Schema({
 	}],
 	user: {
 		type: Schema.ObjectId,
-		ref: 'User'
+		ref: 'User',
+		required: 'Orders are associated with users'
 	},
 //	collectionDetails: {
 //	    type: Schema.ObjectId,
@@ -90,20 +93,20 @@ var OrderItem = mongoose.model('OrderItem', OrderItemSchema);
 OrderSchema.pre('validate', function(next) {
     var order = this;
 
-    console.log('validating order');
+    debug('validating order');
 
     // Essentially we are populating from the catalogue api
     productsApi.get({
         itemsperpage: order.items.length,
         ids: _.map(order.items, '_product')
     }).then(function(res) {
-        console.log(res.body);
+        debug(res.body);
         var products = _.keyBy(res.body,'_id');
         order.total = _(order.items)
             .map(function(item) {
-                item._product = products[item._product];
-                item.price = item._product.price;
-                item.name = item._product.name;
+                var product = products[item._product];
+                item.price = product.price;
+                item.name = product.name;
                 item.price = (item.price ? item.price : 0);
                 item.total = item.price * item.quantity;
                 return item.total;
