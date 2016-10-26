@@ -29,6 +29,8 @@ var mongoose = require('mongoose'),
 module.exports = function() {
 
     var config = _config.depends['psp-local'];
+    
+    exports.cfg = config;
 
     exports.initiatePayment = function initiatePayment(order, callback) {
 

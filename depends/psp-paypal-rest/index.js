@@ -45,6 +45,8 @@ module.exports = function() {
       'client_secret': config.clientSecret
     });
 
+    exports.cfg = config;
+
     exports.initiatePayment = function initiatePayment(order, callback) {
 
         var params = {
