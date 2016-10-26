@@ -73,7 +73,7 @@
 	                            },
 	                            "initial": { "type": "object" },
 	                            "info": { "type": "object" }, 
-	                            "details": { "type": "object" }, 
+	                            "details": { "anyOf": [{"type": "object" },{"type": "null"}] }, 
 	                            "confirmation": { "type": "object" }, 
 	                            "cancelled": { "type": "object" }
 	                        }

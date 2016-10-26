@@ -54,12 +54,6 @@ resourceTypes:
                 schema: <<schema>>
       delete:
         description: Delete <<schema>>
-
-/orders:
-  displayName: Orders
-  type: { typedMemberCollection: { schema: Order } }
-  /{orderId}:
-    type: { typedMember: { schema: Order } }
     
 /checkout:
   displayName: Checkout
@@ -73,12 +67,18 @@ resourceTypes:
               schema: |
                 {
                   "$schema": "http://json-schema.org/draft-03/schema#",
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": { "type": "string" },
-                      "buttonImageUrl": { "type": "string" }
+                  "type": "object",
+                  "properties": {
+                    "active": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "buttonImageUrl": { "type": "string" }
+                        }
+                      }
                     }
                   }
                 }
@@ -161,3 +161,10 @@ resourceTypes:
               body:
                 application/json:
                   schema: Order
+            400:
+              description: Order can no longer cancelled via the checkout.
+/orders:
+  displayName: Orders
+  type: { typedMemberCollection: { schema: Order } }
+  /{orderId}:
+    type: { typedMember: { schema: Order } }
