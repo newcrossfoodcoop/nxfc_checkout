@@ -10,6 +10,8 @@ var util = require('util'),
 var path = require('path');
 var config = require('config');
 
+var debug = require('debug')('provides:express');
+
 var plugins = {
     'local-psp': require(path.resolve('./depends/psp-local'))(),
     'paypal-rest': require(path.resolve('./depends/psp-paypal-rest'))()
@@ -39,7 +41,7 @@ exports.start = function(req, res) {
     var order = new Order(req.body);
     order.user = req.user = req.body.user;
     
-    console.log(order);
+    debug(order);
 
     // orders can only be created in the new state and modifications are
     // managed through contoller methods (no bare updates)
@@ -92,8 +94,9 @@ function checkState(order, thisState, prevState, callback) {
             'invalid state transition %s -> %s', order.state, thisState
         )));
     }
-    
-    callback();
+    else {
+        callback();
+    }
 }
 
 exports.redirected = function(req, res) {

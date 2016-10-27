@@ -23,6 +23,7 @@ var OrderItemSchema = new Schema({
         min: 1,
         default: 1
     },
+    validated: Boolean,
     updated: {
 		type: Date,
 		default: Date.now
@@ -95,20 +96,33 @@ OrderSchema.pre('validate', function(next) {
 
     debug('validating order');
 
+    // Only validate items that haven't been checked yet
+    var ids = _(order.items)
+        .reject('validated')
+        .map('_product')
+        .valueOf();
+
+    debug(ids);
+    if (ids.length === 0) { return next(); }
+
     // Essentially we are populating from the catalogue api
-    productsApi.get({
-        itemsperpage: order.items.length,
-        ids: _.map(order.items, '_product')
-    }).then(function(res) {
+    productsApi.put(ids).then(function(res) {
         debug(res.body);
+
         var products = _.keyBy(res.body,'_id');
         order.total = _(order.items)
             .map(function(item) {
                 var product = products[item._product];
-                item.price = product.price;
-                item.name = product.name;
-                item.price = (item.price ? item.price : 0);
-                item.total = item.price * item.quantity;
+                if (product) {
+                    item.price = product.price;
+                    item.name = product.name;
+                    item.price = (item.price ? item.price : 0);
+                    item.total = item.price * item.quantity;
+                    item.validated = true;
+                }
+                if (!item.validated) {
+                    throw new Error('unable to validate item: ', item._product);
+                }
                 return item.total;
             })
             .reduce(function(total,subtot) { return total + subtot; },0);
