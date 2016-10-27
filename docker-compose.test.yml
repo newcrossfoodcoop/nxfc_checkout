@@ -1,0 +1,23 @@
+version: '2'
+services:
+  mongo:
+    image: "newcrossfoodcoop/nxfc-mongo"
+    ports:
+      - "27017:27017"
+  catalogue:
+    network_mode: host
+    image: "newcrossfoodcoop/nxfc_catalogue:latest" 
+    ports:
+      - "3011:3011"
+    depends_on:
+      - mongo
+    command: gulp test:api
+  checkout:
+    network_mode: host
+    build: .
+    ports:
+      - "3031:3031"
+    depends_on:
+      - mongo
+      - catalogue
+    command: gulp test:express
