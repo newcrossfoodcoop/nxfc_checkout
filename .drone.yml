@@ -5,17 +5,34 @@ cache:
 
 build:
   main:
-    image: mhart/alpine-node:4.5
+    image: newcrossfoodcoop/nxfc_base:v4.5.2
+    depends_on:
+      - catalogue
     commands:
       - npm install
       - node_modules/.bin/gulp test
-    
+      - node_modules/.bin/gulp test:express &
+      - sleep 10s
+      - NODE_ENV=test node_modules/.bin/abao provides/express/raml/api.raml --server http://localhost:3031/api --hookfiles=provides/express/raml/hooks/*.js
+
+compose:
+  mongo:
+    image: newcrossfoodcoop/nxfc-mongo:latest
+  catalogue:
+    image: newcrossfoodcoop/nxfc_catalogue:latest
+    pull: true
+    command: gulp test:api
+
+notify:
+  gitter:
+    webhook: https://webhooks.gitter.im/e/$${GITTER_ID}
+
 publish:
   docker:
     username: bsimpson53
     email: $$DOCKER_EMAIL
     password: $$DOCKER_PASSWORD
-    repo: newcrossfoodcoop/nxfc_base
+    repo: newcrossfoodcoop/nxfc_checkout
     tag: latest
     when:
       branch: master
@@ -24,7 +41,7 @@ publish:
     username: bsimpson53
     email: $$DOCKER_EMAIL
     password: $$DOCKER_PASSWORD
-    repo: newcrossfoodcoop/nxfc_base
+    repo: newcrossfoodcoop/nxfc_checkout
     tag: $$TAG
     when:
       event: tag

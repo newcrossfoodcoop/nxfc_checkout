@@ -17,6 +17,35 @@ var util = require('util');
 var path = require('path');
 var ramlParser = require('raml-parser');
 
+function pickArgs (names,defaults) {
+    return _(args)
+        .keys()
+        .intersection(names)
+        .map(function(k){
+            if (typeof(args[k]) !== 'boolean') { return '--' + k + '=' + args[k]; }
+            if (_.has(defaults,k)) { return '--' + k + '=' + defaults[k]; }
+            return '--' + k;
+        })
+        .valueOf();
+}
+
+function runMatchingSequence(regex) {
+    return function(done) {
+        var tasks = _(gulp.tasks)
+            .keys()
+            .filter(function (key) { return regex.test(key); })
+            .valueOf();
+        
+        if (tasks.length) {   
+            runSequence(tasks,done);
+        }
+        else {
+            console.log(chalk.yellow('No matching tasks found: '),regex);
+            done();
+        }
+    };
+}
+
 // Set NODE_ENV to 'test'
 gulp.task('env:test', function () {
 	process.env.NODE_ENV = 'test';
@@ -41,24 +70,20 @@ gulp.task('env:stage', function () {
 gulp.task('nodemon', function () {
 	return plugins.nodemon({
 		script: 'provides/express',
-		nodeArgs: ['--debug'],
-		ext: 'js,html',
-		watch: _.union([])
+		nodeArgs: pickArgs(['debug']),
+		ext: 'js,html,json',
+		watch: ['provides','depends','config','package.json','lib']
 	});
 });
 
 gulp.task('node', function () {
-    var nodeArgs = ['provides/express'];
     var spawn = require('child_process').spawn;
-    console.log(args);
     
-    _(['stack-size', 'debug', 'max_old_space_size'])
-        .forEach(function(k) {
-            var sk = 'spawn_' + k;
-            if (!_.has(args,sk)) { return; }
-            if (typeof(args[sk]) !== 'undefined') {nodeArgs.push( '--' + k + '=' + args[sk] );}
-            else {nodeArgs.push('--' + k);}
-        });
+    var nodeArgs = _(['provides/express'])
+        .union(pickArgs(['debug', 'spawn_stack-size', 'spawn_max_old_space_size']))
+        .map(function(k) { return _.replace(k,'spawn_',''); } )
+        .valueOf();
+    
     console.log('spawning: node',nodeArgs);
     spawn('node', nodeArgs, {stdio: 'inherit'}); 
 });
@@ -117,6 +142,11 @@ gulp.task('stage', function(done) {
 	runSequence('env:stage', 'node', done);
 });
 
+// Run the project in test mode
+gulp.task('test:express', function(done) {
+	runSequence('env:test', 'node', done);
+});
+
 gulp.task('loadModuleTasks', function () {
     return gulp.src(['./depends/*/*gulpfile.js','./provides/*/*gulpfile.js'])
         .pipe(plugins.fn(function(file) {
@@ -124,23 +154,6 @@ gulp.task('loadModuleTasks', function () {
             require(file.path); 
         }));
 });
-
-function runMatchingSequence(regex) {
-    return function(done) {
-        var tasks = _(gulp.tasks)
-            .keys()
-            .filter(function (key) { return regex.test(key); })
-            .valueOf();
-        
-        if (tasks.length) {   
-            runSequence(tasks,done);
-        }
-        else {
-            console.log(chalk.yellow('No matching tasks found: '),regex);
-            done();
-        }
-    };
-}
 
 gulp.task('build', ['loadModuleTasks'], runMatchingSequence(/^build\:/));
 

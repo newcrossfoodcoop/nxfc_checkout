@@ -33,7 +33,8 @@ hooks.before('POST /checkout/{method} -> 200', function(test, done) {
         }];
         test.request.body.user = store.user;
         done();
-    });
+    })
+    .catch(done);
 });
 
 //{ redirect: 'http://localhost:3030/checkout/local-psp/580e719f6b3d1e0abb07e640/redirected?token=TOKEN&PayerID=localpayer' }
