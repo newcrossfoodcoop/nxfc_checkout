@@ -10,31 +10,8 @@ var express = require('express'),
 	path = require('path');
 
 var glob = require('glob');
-var config = require('config');
+var config = require('../config');
 var debug = require('debug')('provides:express');
-
-var lib = require(path.resolve('./lib/config'));
-
-var myDefaultConfigs = {
-    port: 8080,
-    routes: path.resolve(__dirname, '../routes/**/*.js'),
-    _externalUrl: lib.deferredSetUrl('externalUrl'),
-    externalUrl: {
-        protocol: 'http',
-        slashes: true,
-        hostname: 'localhost',
-        port: 8080
-    },
-    env: {
-        port: 'EXPRESS_PORT'
-    }
-};
-
-lib.processConfig({
-    moduleGroup: 'provides',
-    module: 'express',
-    defaultConfig: myDefaultConfigs
-});
 
 /**
  * Initialize local variables
@@ -58,11 +35,13 @@ module.exports.initMiddleware = function (app) {
 	// Enable jsonp
 	app.enable('jsonp callback');
 
+    // Enable logger (morgan)
+    if (config.provides.express.logging) {
+        app.use(morgan(config.provides.express.logging));
+    }
+    
 	// Environment dependent middleware
 	if (process.env.NODE_ENV === 'development') {
-		// Enable logger (morgan)
-		app.use(morgan('dev'));
-
 		// Disable views cache
 		app.set('view cache', false);
 	} else if (process.env.NODE_ENV === 'production') {
