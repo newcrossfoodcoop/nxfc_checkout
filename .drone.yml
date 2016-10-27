@@ -5,11 +5,12 @@ cache:
 
 build:
   main:
-    image: newcrossfoodcoop/nxfc_base:v4.5.2
+    image: newcrossfoodcoop/nxfc_base:v4.6.0
     depends_on:
       - catalogue
     commands:
       - npm install
+      - node_modules/.bin/gulp build
       - node_modules/.bin/gulp test
       - node_modules/.bin/gulp test:express &
       - sleep 10s
