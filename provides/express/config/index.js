@@ -16,7 +16,8 @@ var myDefaultConfigs = {
         port: 8080
     },
     env: {
-        port: 'EXPRESS_PORT'
+        port: 'EXPRESS_PORT',
+        externalUrlHref: 'EXPRESS_EXTERNAL_HREF'
     }
 };
 

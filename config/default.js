@@ -38,7 +38,7 @@ module.exports = {
         express: {
             port: 3030,
             externalUrl: {
-                host: 'localhost:3030'
+                host: 'localhost:3000'
             }
         }
     }
