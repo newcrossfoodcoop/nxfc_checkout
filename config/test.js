@@ -8,12 +8,21 @@ module.exports = {
             url: {
                 port: 3011
             }
-        }
+        },
+        'psp-paypal-rest': {
+            externalHost: 'localhost:3001',
+        },
+        'psp-local': {
+            externalHost: 'localhost:3001',
+        }, 
     },
 	provides: {
 	    express: {
 	        logging: null,
-            port: 3031
+            port: 3031,
+            externalUrl: {
+                host: 'localhost:3001'
+            },
         }
 	}
 };

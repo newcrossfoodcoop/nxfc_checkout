@@ -22,16 +22,16 @@ module.exports = {
         },
         catalogue: {},
         'psp-paypal-rest': {
-            externalHost: defer(function() {
-                var cfg = this;
-                return cfg.provides.express.externalUrl.host;
-            }) 
+            externalHost: 'localhost:3000',
+            env: {
+                externalHost: 'EXTERNAL_HOST'
+            }
         },
         'psp-local': {
-            externalHost: defer(function() {
-                var cfg = this;
-                return cfg.provides.express.externalUrl.host;
-            }) 
+            externalHost: 'localhost:3000',
+            env: {
+                externalHost: 'EXTERNAL_HOST'
+            }
         }, 
     },
     provides: {
@@ -39,6 +39,11 @@ module.exports = {
             port: 3030,
             externalUrl: {
                 host: 'localhost:3000'
+            },
+            env: {
+                externalUrl: {
+                    host: 'EXTERNAL_HOST'
+                }
             }
         }
     }
