@@ -22,15 +22,15 @@ module.exports = {
         },
         catalogue: {},
         'psp-paypal-rest': {
-            externalHost: 'localhost:3000',
+            externalHref: 'http://localhost:3000',
             env: {
-                externalHost: 'EXTERNAL_HOST'
+                externalHref: 'EXTERNAL_HREF'
             }
         },
         'psp-local': {
-            externalHost: 'localhost:3000',
+            externalHref: 'http://localhost:3000',
             env: {
-                externalHost: 'EXTERNAL_HOST'
+                externalHref: 'EXTERNAL_HREF'
             }
         }, 
     },
@@ -38,11 +38,11 @@ module.exports = {
         express: {
             port: 3030,
             externalUrl: {
-                host: 'localhost:3000'
+                href: 'http://localhost:3000'
             },
             env: {
                 externalUrl: {
-                    host: 'EXTERNAL_HOST'
+                    href: 'EXTERNAL_HREF'
                 }
             }
         }

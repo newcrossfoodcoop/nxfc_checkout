@@ -10,10 +10,10 @@ module.exports = {
             }
         },
         'psp-paypal-rest': {
-            externalHost: 'localhost:3001',
+            externalHref: 'http://localhost:3001',
         },
         'psp-local': {
-            externalHost: 'localhost:3001',
+            externalHref: 'http://localhost:3001',
         }, 
     },
 	provides: {

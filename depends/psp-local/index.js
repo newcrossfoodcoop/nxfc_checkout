@@ -14,7 +14,7 @@ var myDefaultConfigs = {
     name: 'local-psp',
     plugin: 'localPSP',
     returnUrl : defer(function() {
-        return 'http://' + this.externalHost + '/checkout/local-psp/%s/redirected';
+        return url.resolve(this.externalHref, '/checkout/local-psp/%s/redirected');
     })
 };
 
