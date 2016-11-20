@@ -23,6 +23,10 @@ compose:
     image: newcrossfoodcoop/nxfc_catalogue:latest
     pull: true
     command: gulp test:api
+  stock:
+    image: newcrossfoodcoop/nxfc_stock:latest
+    pull: true
+    command: gulp test:express
 
 notify:
   gitter:

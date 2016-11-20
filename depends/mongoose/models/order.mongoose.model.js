@@ -8,20 +8,22 @@ var _ = require('lodash');
 var mongoose = require('mongoose'),
 	Schema = mongoose.Schema;
 
-var debug = require('debug')('depends:mongoose');
+var debug = require('debug')('depends:mongoose:orders');
 	
 var path = require('path');
 var productsApi = require(path.resolve('./depends/catalogue')).api.resources.products;
 
 var OrderItemSchema = new Schema({
-    _product: { type: Schema.Types.ObjectId, ref: 'Product' },
+    _product: { type: Schema.Types.ObjectId, required: true },
+    supplierId: { type: Schema.Types.ObjectId, required: true },
     price: Number,
     total: Number,
     name: String,
     quantity: {
         type: Number,
         min: 1,
-        default: 1
+        default: 1,
+        required: true
     },
     validated: Boolean,
     updated: {
@@ -47,7 +49,7 @@ var OrderSchema = new Schema({
 	state: {
 		type: String,
 		enum: ['new', 'submitted', 'redirected', 'gotdetails','confirmed', 'cancelled', 'deleted'],
-		required: 'state must be defined'
+		required: true
 	},
 	items: [ OrderItemSchema ],
 	total: {
@@ -69,17 +71,13 @@ var OrderSchema = new Schema({
 	user: {
 		type: Schema.ObjectId,
 		ref: 'User',
-		required: 'Orders are associated with users'
+		required: true
 	},
-//	collectionDetails: {
-//	    type: Schema.ObjectId,
-//		ref: 'Collection',
-//		required: 'all orders must be associated with a collection'
-//	},
-	orderType: {
-	    type: String,
-	    enum: ['supplier', 'customer'],
-	    default: 'customer'
+	stockCheckoutId: {
+	    type: Schema.ObjectId
+	},
+	pickupId: {
+	    type: Schema.ObjectId
 	}
 });
 
@@ -94,15 +92,13 @@ var OrderItem = mongoose.model('OrderItem', OrderItemSchema);
 OrderSchema.pre('validate', function(next) {
     var order = this;
 
-    debug('validating order');
-
     // Only validate items that haven't been checked yet
     var ids = _(order.items)
         .reject('validated')
         .map('_product')
         .valueOf();
 
-    debug(ids);
+    debug('validating order items: ' + ids);
     if (ids.length === 0) { return next(); }
 
     // Essentially we are populating from the catalogue api
@@ -114,11 +110,13 @@ OrderSchema.pre('validate', function(next) {
             .map(function(item) {
                 var product = products[item._product];
                 if (product) {
+                    item.cost = product.supplierPrice;
                     item.price = product.price;
                     item.name = product.name;
                     item.price = (item.price ? item.price : 0);
                     item.total = item.price * item.quantity;
                     item.validated = true;
+                    item.supplierId = product.supplier;
                 }
                 if (!item.validated) {
                     throw new Error('unable to validate item: ', item._product);

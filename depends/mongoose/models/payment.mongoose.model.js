@@ -12,7 +12,8 @@ var transactionParams = {
     log: { 
         type: [{ 
             name: { type: String, enum: transactionStates }, 
-            date: { type: Date, default: Date.now } 
+            date: { type: Date, default: Date.now },
+            content: { type: Object }
         }],
         default: []
     }

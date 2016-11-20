@@ -9,6 +9,8 @@ var querystring = require('querystring');
 var request = require('request');
 
 var products = require(path.resolve('./depends/catalogue')).api.resources.products;
+var suppliers = require(path.resolve('./depends/catalogue')).api.resources.suppliers;
+var pickups = require(path.resolve('./depends/stock')).api.resources.pickups;
 
 var store = {
     user: '57c4b1ba1abb0114001963c5'
@@ -17,14 +19,31 @@ var store = {
 hooks.before('POST /checkout/{method} -> 200', function(test, done) {
     test.request.params.method = 'local-psp';
     
-    //first create a product to order
-    products.post({
-        name: 'foomania',
-        supplierPrice: 13.41
+    pickups.post({
+        description: 'Pickup description',
+        location: '1234567890abcdef123456a1',
+        start: '2016-10-28T12:00:00.000Z',
+        end: '2016-10-28T16:00:00.000Z',
+        state: 'open'
+    })
+    .then((res) => {
+        assert.equal(res.status,200,res.body);
+        store.pickup = res.body;
+        return suppliers.post({
+            name: 'foofactory'
+        });
+    })
+    .then((res) => {
+        //create a product to order
+        return products.post({
+            name: 'foomania',
+            supplierPrice: 13.41,
+            supplier: res.body._id
+        });
     })
     .then(function(res) {
         store.product = res.body;
-    
+        test.request.body.pickupId = store.pickup._id;
         test.request.body.items = [{
             _product: res.body._id, 
             price: res.body.price, 
@@ -34,7 +53,7 @@ hooks.before('POST /checkout/{method} -> 200', function(test, done) {
         test.request.body.user = store.user;
         done();
     })
-    .catch(done);
+    .catch((err) => { console.error(err); done(); });
 });
 
 //{ redirect: 'http://localhost:3030/checkout/local-psp/580e719f6b3d1e0abb07e640/redirected?token=TOKEN&PayerID=localpayer' }
@@ -100,7 +119,8 @@ hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 200'
                 total : store.product.price,
                 user: store.user,
                 orderType: 'customer',
-                method: 'local-psp'    
+                method: 'local-psp',
+                pickupId: store.pickup._id 
             }, 
             json: true
         },

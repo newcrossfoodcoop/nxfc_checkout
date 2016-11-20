@@ -6,16 +6,20 @@ var util = require('util'),
     Order = mongoose.model('Order'),
     async = require('async'),
     _ = require('lodash');
-    
+
+var thenify = require('thenify');    
 var path = require('path');
 var config = require('config');
+var assert = require('assert');
 
-var debug = require('debug')('provides:express');
+var debug = require('debug')('provides:express:checkout');
 
 var plugins = {
     'local-psp': require(path.resolve('./depends/psp-local'))(),
     'paypal-rest': require(path.resolve('./depends/psp-paypal-rest'))()
 };
+
+var stockCheckoutsApi = require(path.resolve('./depends/stock')).api.resources.checkouts;
 
 function getSubController(method) {
     if (plugins[method]) return plugins[method];
@@ -49,38 +53,116 @@ exports.start = function(req, res) {
 
     var subController = getSubController(req.params.method);
     
-    async.waterfall([
-        function(callback) {
-            order.save(callback);
-        },
-        function(_order,n,callback) {
-            order = _order;
-            subController.initiatePayment(order, callback);
-        },
-        function(data, callback){
+    order
+        .save()
+        .then(() => {
+            debug('Reserving stock');
+            
+            var items = _.map(order.items, (item) => {
+                return {
+                    price: item.price,
+                    cost: item.cost,
+                    quantity: item.quantity,
+                    productId: item._product,
+                    supplierId: item.supplierId,
+                    name: item.name
+                };
+            });
+            
+            return stockCheckoutsApi.post({
+                orderId: order._id,
+                pickup: order.pickupId,
+                items: items
+            });
+        })
+        .then((res) => {
+            assert.equal(res.status,200,res.body);
+            order.stockCheckoutId = res.body._id;
+            return order.save();
+        })
+        .then(() => {
+            debug('Initiating payment');
+            return thenify(subController.initiatePayment)(order);
+        })
+        .then((data) => {
+            debug('Recording transaction');
             var payment = new Payment({ 
                 user: req.user,
                 method: req.body.method
             });
             order.payments.push(payment);
             payment.orderId = order._id;
-            payment.recordTransaction('initial', data, callback);
-        },
-        function(payment,n,callback) {
+            
+            return new Promise((resolve,reject) => { 
+                payment.recordTransaction('initial', data, (err) => {
+                    if (err) { reject(err); }
+                    else { resolve(); }
+                }); 
+            });
+        })
+        .then((payment) => {
             order.state = 'submitted';
-            order.save(callback);
-        },
-        function(order,n,callback) {
-            order.populate('payments',callback);
-        }
-    ],
-    function(err,order) {
-        if (err) {
+            return order.save();
+        })
+        .then((doc) => {
+            return doc.populate('payments');
+        })
+        .then((doc) => {
+            res.jsonp({ redirect: subController.approvalRedirectUrl(order) });
+        })
+        .catch((err) => {
             console.error(err);
-            return res.status(400).send(err);
-        }
-        res.jsonp({ redirect: subController.approvalRedirectUrl(order) });
-    });
+            return res.status(400).send('A checkout error has occured');
+        });
+    
+//    async.waterfall([
+//        function saveOrder(callback) {
+//            order.save(callback);
+//        },
+//        function initiatePayment(_order,n,callback) {
+//            order = _order;
+//        },
+//        function reserveStock(callback) {
+//            debug('Reserving stock');
+//            stockCheckoutsApi
+//                .post({
+//                    orderId: order._id;
+//                })
+//                .then((res) => {
+//                    debug(res.body);
+//                });
+//        },
+//        function saveOrder(callback) {
+//            order.save(callback);
+//        },
+//        function initiatePayment(_order,n,callback) {
+//            order = _order;
+//            subController.initiatePayment(order, callback);
+//        },
+//        function recordPayment(data, callback){
+//            var payment = new Payment({ 
+//                user: req.user,
+//                method: req.body.method
+//            });
+//            order.payments.push(payment);
+//            payment.orderId = order._id;
+//            payment.recordTransaction('initial', data, callback);
+//        },
+//        function setOrderState(payment,n,callback) {
+//            order.state = 'submitted';
+//            order.save(callback);
+//        },
+//        function populatePayments(order,n,callback) {
+//            order.populate('payments',callback);
+//        }
+//    ],
+//    function(err,order) {
+//        if (err) {
+//            console.error(err);
+//            return res.status(400).send(err);
+//        }
+//        res.jsonp({ redirect: subController.approvalRedirectUrl(order) });
+//    });
 };
 
 function checkState(order, thisState, prevState, callback) {

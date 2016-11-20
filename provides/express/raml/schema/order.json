@@ -22,8 +22,9 @@
 	                ]},
 	                "price": { "type": "number" },
 	                "total": { "type": "number" },
-	                "name": { "type": "string" },
-	                "quantity": { "type": "integer" }
+	                "name": { "type": "string", "required": true },
+	                "quantity": { "type": "integer", "required": true },
+	                "supplierId": { "type": "string", "required": true }
 	            }
 	        }
 	    },

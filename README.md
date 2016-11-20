@@ -10,8 +10,8 @@ via a trusted gateway.
 ## Provides
 
 * **Express** api
- * [Documentation](http://localhost:3010)
- * [RAML specification](http://localhost:3010/api.raml)
+ * [Documentation](http://localhost:3030)
+ * [RAML specification](http://localhost:3030/api.raml)
 
 This repository generates a container that **provides** checkout and order 
 services intended to be accessed through a secured gateway.

@@ -30,7 +30,8 @@
     "mongoose": "^4.6.4",
     "morgan": "^1.7.0",
     "paypal-rest-sdk": "^1.6.9",
-    "popsicle": "^0.3.11"
+    "popsicle": "^0.3.11",
+    "thenify": "^3.2.1"
   },
   "devDependencies": {
     "abao": "0.4.0",
