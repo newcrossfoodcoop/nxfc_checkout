@@ -9,6 +9,11 @@ module.exports = {
                 port: 3011
             }
         },
+        stock: {
+            url: {
+                port: 3041
+            }
+        },
         'psp-paypal-rest': {
             externalHref: 'http://localhost:3001',
         },

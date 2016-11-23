@@ -21,6 +21,7 @@ module.exports = {
             models: 'depends/mongoose/models/*.js'
         },
         catalogue: {},
+        stock: {},
         'psp-paypal-rest': {
             externalHref: 'http://localhost:3000',
             env: {

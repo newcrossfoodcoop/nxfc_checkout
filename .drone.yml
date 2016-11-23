@@ -8,6 +8,7 @@ build:
     image: newcrossfoodcoop/nxfc_base:v4.6.0
     depends_on:
       - catalogue
+      - stock
     commands:
       - npm install
       - node_modules/.bin/gulp build
@@ -18,7 +19,7 @@ build:
 
 compose:
   mongo:
-    image: newcrossfoodcoop/nxfc-mongo:latest
+    image: mongo:3
   catalogue:
     image: newcrossfoodcoop/nxfc_catalogue:latest
     pull: true
@@ -26,7 +27,8 @@ compose:
   stock:
     image: newcrossfoodcoop/nxfc_stock:latest
     pull: true
-    command: gulp test:express
+    environment:
+      - NODE_ENV=test
 
 notify:
   gitter:
