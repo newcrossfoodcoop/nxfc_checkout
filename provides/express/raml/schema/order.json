@@ -31,7 +31,7 @@
 	    "payments": {
 	        "type": "array",
 	        "items": {
-	            "anyOf": [{
+	            "oneOf": [{
 	                "type": "string"
 	            },{
 	                "type": "object",
@@ -95,6 +95,7 @@
 	        "type": "string",
 	        "enum": ["supplier", "customer"],
 	        "default": "customer"
-	    }
+	    },
+	    "pickup": { "type": "string" }
 	}
 }

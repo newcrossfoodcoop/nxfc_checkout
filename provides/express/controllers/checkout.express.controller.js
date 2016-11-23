@@ -236,6 +236,11 @@ exports.confirm = function(req, res) {
             console.log('record transaction started');
         },
         function(_payment,n,callback) {
+            stockCheckoutsApi.checkoutId(order.stockCheckoutId).get()
+                .then((stockCheckout) => { callback(null, stockCheckout); })
+                .catch((err) => { callback(err); });
+        },
+        function(stockCheckout,callback) {
             order.state = 'confirmed';
             order.save(callback);
             console.log('order save started');
