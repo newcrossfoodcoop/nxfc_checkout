@@ -236,7 +236,7 @@ exports.confirm = function(req, res) {
             console.log('record transaction started');
         },
         function(_payment,n,callback) {
-            stockCheckoutsApi.checkoutId(order.stockCheckoutId).confirm().get()
+            stockCheckoutsApi.checkoutId(order.stockCheckoutId).confirm.get()
                 .then((stockCheckout) => { callback(null, stockCheckout); })
                 .catch((err) => { callback(err); });
         },
