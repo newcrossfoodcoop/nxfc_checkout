@@ -19,10 +19,10 @@ var myDefaultConfigs = {
     clientID: 'PAYPAL_REST_CLIENTID',
     clientSecret: 'PAYPAL_REST_CLIENTSECRET',
     returnUrl : defer(function() {
-        return url.resolve(this.externalHref, '/checkout/paypal-rest/%s/redirected');
+        return url.resolve(this.externalHref, '/checkout/', this.name, '/%s/redirected');
     }),
     cancelUrl : defer(function() {
-        return url.resolve(this.externalHref, '/checkout/paypal-rest/%s/cancelled');
+        return url.resolve(this.externalHref, '/checkout/', this.name, '/%s/cancelled');
     }),
     buttonImageUrl: 'https://www.paypal.com/en_GB/GB/i/btn/btn_xpressCheckout.gif',
     env: {
