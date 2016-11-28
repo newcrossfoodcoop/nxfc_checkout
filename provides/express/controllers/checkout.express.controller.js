@@ -14,10 +14,14 @@ var assert = require('assert');
 
 var debug = require('debug')('provides:express:checkout');
 
-var plugins = {
-    'local-psp': require(path.resolve('./depends/psp-local'))(),
-    'paypal-rest': require(path.resolve('./depends/psp-paypal-rest'))()
-};
+var plugins = {};
+
+_.forEach([
+    require(path.resolve('./depends/psp-local'))(),
+    require(path.resolve('./depends/psp-paypal-rest'))()
+],(psp) => {
+    plugins[psp.cfg.name] = psp;
+});
 
 var stockCheckoutsApi = require(path.resolve('./depends/stock')).api.resources.checkouts;
 
