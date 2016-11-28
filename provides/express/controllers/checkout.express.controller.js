@@ -109,7 +109,7 @@ exports.start = function(req, res) {
             return order.save();
         })
         .then((doc) => {
-            return doc.populate('payments');
+            return doc.populate('payments').execPopulate();
         })
         .then((doc) => {
             res.jsonp({ redirect: subController.approvalRedirectUrl(doc) });

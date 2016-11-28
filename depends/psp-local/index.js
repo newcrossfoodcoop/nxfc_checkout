@@ -4,6 +4,8 @@ var path = require('path'),
     util = require('util'),
     url = require('url'),
     _ = require('lodash');
+var assert = require('assert');
+    
 var defer = require('config/defer').deferConfig;
 var _config = require('config');
 
@@ -56,6 +58,7 @@ module.exports = function() {
     };
 
     exports.approvalRedirectUrl = function approvalRedirectUrl(order) {
+        assert.ok(order.getPayment().transactions.initial);
         return util.format(config.returnUrl, order._id) + '?token=TOKEN&PayerID=localpayer';
     };
 
