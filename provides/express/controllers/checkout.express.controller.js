@@ -76,6 +76,7 @@ exports.start = function(req, res) {
             return stockCheckoutsApi.post({
                 orderId: order._id,
                 pickup: order.pickupId,
+                user: _.pick(order.user, ['_id', 'name', 'email']),
                 items: items
             });
         })
