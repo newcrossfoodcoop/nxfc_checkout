@@ -76,7 +76,7 @@ exports.start = function(req, res) {
             return stockCheckoutsApi.post({
                 orderId: order._id,
                 pickup: order.pickupId,
-                user: _.pick(order.user, ['_id', 'name', 'email']),
+                user: _.pick(order.user, ['_id', 'username', 'displayName', 'email']),
                 items: items
             });
         })
@@ -117,57 +117,8 @@ exports.start = function(req, res) {
         })
         .catch((err) => {
             console.error(err);
-            return res.status(400).send('A checkout error has occured');
+            return res.status(400).send({ message: 'A checkout error has occured' });
         });
-    
-//    async.waterfall([
-//        function saveOrder(callback) {
-//            order.save(callback);
-//        },
-//        function initiatePayment(_order,n,callback) {
-//            order = _order;
-//        },
-//        function reserveStock(callback) {
-//            debug('Reserving stock');
-//            stockCheckoutsApi
-//                .post({
-//                    orderId: order._id;
-//                })
-//                .then((res) => {
-//                    debug(res.body);
-//                });
-//        },
-//        function saveOrder(callback) {
-//            order.save(callback);
-//        },
-//        function initiatePayment(_order,n,callback) {
-//            order = _order;
-//            subController.initiatePayment(order, callback);
-//        },
-//        function recordPayment(data, callback){
-//            var payment = new Payment({ 
-//                user: req.user,
-//                method: req.body.method
-//            });
-//            order.payments.push(payment);
-//            payment.orderId = order._id;
-//            payment.recordTransaction('initial', data, callback);
-//        },
-//        function setOrderState(payment,n,callback) {
-//            order.state = 'submitted';
-//            order.save(callback);
-//        },
-//        function populatePayments(order,n,callback) {
-//            order.populate('payments',callback);
-//        }
-//    ],
-//    function(err,order) {
-//        if (err) {
-//            console.error(err);
-//            return res.status(400).send(err);
-//        }
-//        res.jsonp({ redirect: subController.approvalRedirectUrl(order) });
-//    });
 };
 
 function checkState(order, thisState, prevState, callback) {
@@ -217,9 +168,15 @@ exports.redirected = function(req, res) {
         }
     ],
     function(err,result) {
-        if (err) { console.error(err); }
-        if (result) { return res.jsonp(result); }
-        return res.send(400, err);
+        if (err) {
+            console.error(err.stack);
+            res.status(400).send({
+                message: 'A checkout redirect error has occurred'
+            });
+        }
+        else { 
+            return res.jsonp(result); 
+        }
     });
 };
 
@@ -252,9 +209,15 @@ exports.confirm = function(req, res) {
         }
     ],
     function(err,result) {
-        if (err) { console.error(err); }
-        if (result) { return res.jsonp(result); }
-        return res.send(400, err);
+        if (err) {
+            console.error(err.stack);
+            res.status(400).send({
+                message: 'A checkout confirm error has occurred'
+            });
+        }
+        else { 
+            return res.jsonp(result); 
+        }
     });
 };
 
@@ -278,9 +241,15 @@ exports.cancelled = function(req, res) {
         }
     ],
     function(err,result) {
-        if (err) { console.error(err); }
-        if (result) { return res.jsonp(result); }
-        return res.status(400).jsonp(err);
+        if (err) {
+            console.error(err.stack);
+            res.status(400).send({
+                message: 'A checkout cancel error has occurred'
+            });
+        }
+        else { 
+            return res.jsonp(result); 
+        }
     });
 };
 
