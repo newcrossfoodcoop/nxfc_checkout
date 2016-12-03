@@ -31,9 +31,10 @@ var PaymentSchema = new Schema({
         required: 'Payment must be associated with an order'
     },
     user: {
-        type: Schema.Types.ObjectId,
-        required: 'Payment must be associated with an user',
-        ref: 'User'
+        _id: { type: String, required: true },
+        username: { type: String, required: true },
+        displayName: { type: String, required: true },
+        email: { type: String, required: true }
     },
     state: {
         type: String,
