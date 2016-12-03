@@ -69,10 +69,9 @@ var OrderSchema = new Schema({
 	    ref: 'Payment'
 	}],
 	user: {
-        _id: { type: String, required: true },
-        username: { type: String, required: true },
-        displayName: { type: String, required: true },
-        email: { type: String, required: true }
+		type: Schema.ObjectId,
+		ref: 'User',
+		required: true
 	},
 	stockCheckoutId: {
 	    type: Schema.ObjectId
