@@ -13,7 +13,12 @@ var suppliers = require(path.resolve('./depends/catalogue')).api.resources.suppl
 var pickups = require(path.resolve('./depends/stock')).api.resources.pickups;
 
 var store = {
-    user: '57c4b1ba1abb0114001963c5'
+    user: {
+        _id: '57c4b1ba1abb0114001963c5',
+        username: 'checkoutdummy',
+        displayName: 'Checkout Dummy',
+        email: 'checkout@dummy.com'
+    }
 };
 
 hooks.before('POST /checkout/{method} -> 200', function(test, done) {
@@ -27,13 +32,14 @@ hooks.before('POST /checkout/{method} -> 200', function(test, done) {
         state: 'open'
     })
     .then((res) => {
-        assert.equal(res.status,200,res.body);
+        assert.equal(res.status,200,'failed to create pickup: ' + res.body.message);
         store.pickup = res.body;
         return suppliers.post({
             name: 'foofactory'
         });
     })
     .then((res) => {
+        assert.equal(res.status,200,'failed to create supplier: ' + res.body.message);
         //create a product to order
         return products.post({
             name: 'foomania',
@@ -42,6 +48,7 @@ hooks.before('POST /checkout/{method} -> 200', function(test, done) {
         });
     })
     .then(function(res) {
+        assert.equal(res.status,200,'failed to create product: ' + res.body.message);
         store.product = res.body;
         test.request.body.pickupId = store.pickup._id;
         test.request.body.items = [{

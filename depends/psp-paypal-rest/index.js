@@ -59,7 +59,7 @@ module.exports = function() {
                     'total': order.total,
                     'currency': 'GBP',
                 },
-                'description': 'This is the payment transaction description.' }
+                'description': 'Payment for goods from website' }
             ],
             'redirect_urls': {
                 return_url: util.format(config.returnUrl, order._id),

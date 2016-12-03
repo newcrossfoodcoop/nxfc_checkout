@@ -47,7 +47,7 @@ function getActive() {
 exports.start = function(req, res) {
     
     var order = new Order(req.body);
-    order.user = req.user = req.body.user;
+    order.user = req.body.user;
     
     debug(order);
 
@@ -73,16 +73,18 @@ exports.start = function(req, res) {
                 };
             });
             
-            return stockCheckoutsApi.post({
+            var args = {
                 orderId: order._id,
                 pickup: order.pickupId,
-                user: _.pick(order.user, ['_id', 'username', 'displayName', 'email']),
+                user: _.pick(req.body.user, ['_id', 'username', 'displayName', 'email']),
                 items: items
-            });
+            };
+            
+            return stockCheckoutsApi.post(args);
         })
-        .then((res) => {
-            assert.equal(res.status,200,res.body);
-            order.stockCheckoutId = res.body._id;
+        .then((stockPost) => {
+            assert.equal(stockPost.status,200,stockPost.body.message);
+            order.stockCheckoutId = stockPost.body._id;
             return order.save();
         })
         .then(() => {
@@ -92,7 +94,7 @@ exports.start = function(req, res) {
         .then((data) => {
             debug('Recording transaction');
             var payment = new Payment({ 
-                user: req.user,
+                user: req.body.user,
                 method: req.body.method
             });
             order.payments.push(payment);
@@ -199,7 +201,10 @@ exports.confirm = function(req, res) {
         },
         function(_payment,n,callback) {
             stockCheckoutsApi.checkoutId(order.stockCheckoutId).confirm.get()
-                .then((stockCheckout) => { callback(null, stockCheckout); })
+                .then((stockCheckout) => {
+                    assert.equal(stockCheckout.status,200,stockCheckout.body.message); 
+                    callback(null, stockCheckout); 
+                })
                 .catch((err) => { callback(err); });
         },
         function(stockCheckout,callback) {
