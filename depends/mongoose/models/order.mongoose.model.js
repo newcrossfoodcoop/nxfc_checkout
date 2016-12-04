@@ -99,7 +99,9 @@ OrderSchema.pre('validate', function(next) {
         .valueOf();
 
     debug('validating order items: ' + ids);
-    if (ids.length === 0) { throw new Error('No order items Found') }
+    if (order.isNew && ids.length === 0) { 
+        throw new Error('No order items Found'); 
+    }
 
     // Essentially we are populating from the catalogue api
     productsApi.put(ids).then(function(res) {
