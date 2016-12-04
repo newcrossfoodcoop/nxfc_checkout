@@ -99,14 +99,14 @@ OrderSchema.pre('validate', function(next) {
         .valueOf();
 
     debug('validating order items: ' + ids);
-    if (ids.length === 0) { return next(); }
+    if (ids.length === 0) { throw new Error('No order items Found') }
 
     // Essentially we are populating from the catalogue api
     productsApi.put(ids).then(function(res) {
         debug(res.body);
 
         var products = _.keyBy(res.body,'_id');
-        order.total = _(order.items)
+        var total = _(order.items)
             .map(function(item) {
                 var product = products[item._product];
                 if (product) {
@@ -124,6 +124,9 @@ OrderSchema.pre('validate', function(next) {
                 return item.total;
             })
             .reduce(function(total,subtot) { return total + subtot; },0);
+        
+        // Make sure we get a number to at most 2dp
+        order.total = Number(total.toFixed(2));
         
         next();
     }).catch(function(err) {

@@ -5,7 +5,8 @@ module.exports = {
     depends: {
         'psp-paypal-rest': {
             active: true,
-            mode: 'live'
+            mode: 'live',
+            name: 'paypal-rest'
         },
         'psp-local': {
             active: false
