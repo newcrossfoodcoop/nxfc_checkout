@@ -7,6 +7,8 @@ var mongoose = require('mongoose'),
 	Schema = mongoose.Schema,
 	_ = require('lodash');
 
+
+var schemaVersion = 1;
 var transactionStates = ['initial', 'info', 'details', 'confirmation', 'cancelled'];
 var transactionParams = {
     log: { 
@@ -28,7 +30,7 @@ _.forEach(transactionStates, function(state) {
 var PaymentSchema = new Schema({
     orderId: { 
         type: Schema.Types.ObjectId,
-        required: 'Payment must be associated with an order'
+        required: true
     },
     user: {
         type: Schema.Types.ObjectId,
@@ -36,11 +38,15 @@ var PaymentSchema = new Schema({
     },
     state: {
         type: String,
-        required: 'Payment must have a state'
+        required: true
     },
     method: {
         type: String,
-        required: 'Payment must have a method'
+        required: true
+    },
+    amount: {
+        type: Number,
+        required: true
     },
     transactions: transactionParams,
     updated: {
@@ -51,7 +57,60 @@ var PaymentSchema = new Schema({
 		type: Date,
 		default: Date.now
 	},
+	schemaVersion: {
+	    type: Number,
+	    default: schemaVersion
+	}
 });
+
+// set amount on payments with no amount set (old payments);
+PaymentSchema.pre('init', function(next) {
+    var payment = this;
+    if (payment.schemaVersion === schemaVersion) { return next(); }
+    
+    try {
+        // version 1 - amount field added
+        if (!payment.schemaVersion) {
+            payment.amount = payment.transactions.initial.transactions[0].amount.total;
+            payment.schemaVersion = 1;
+        }
+    } catch (err) {
+        return next(err);
+    }
+    
+    payment.schemaVersion = schemaVersion;
+    next();
+});
+
+
+// That's all wrong!
+//PaymentSchema.virtual('amount').get(function() {
+//    var payment = this;
+//    return _.reduce(payment.transactions, (sum, transaction) => { return sum + transaction.amount.total; });
+//});
+
+PaymentSchema.virtual('paid').get(function() {
+    var payment = this;
+    if (payment.state === 'confirmation') {
+        return payment.amount;
+    }
+    else {
+        return 0;
+    }
+});
+
+PaymentSchema.virtual('pending').get(function() {
+    var payment = this;
+    if (_.includes(['confirmation', 'cancelled'],payment.state)) {
+        return 0;   
+    }
+    else {
+        return payment.amount;
+    }
+});
+
+PaymentSchema.set('toJSON', { getters: true });
+PaymentSchema.set('toObject', { getters: true });
 
 PaymentSchema.methods.recordTransaction = function(name, content, callback) {
     this.transactions[name] = content;

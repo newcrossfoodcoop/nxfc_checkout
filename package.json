@@ -49,7 +49,10 @@
     "raml-parser": "^0.8.18",
     "raml2code": "^1.8.4",
     "raml2code-js-client-mulesoft": "0.0.4",
+    "randomstring": "^1.1.5",
     "request": "^2.76.0",
-    "run-sequence": "^1.2.2"
+    "rewire": "^2.5.2",
+    "run-sequence": "^1.2.2",
+    "should": "^11.1.2"
   }
 }

@@ -53,7 +53,9 @@ hooks.before('POST /checkout/{method} -> 200', function(test, done) {
         test.request.body.pickupId = store.pickup._id;
         test.request.body.items = [{
             _product: res.body._id, 
-            price: res.body.price, 
+            price: res.body.price,
+            name: res.body.descName,
+            supplierId: res.body.supplier,
             total: 9, 
             quantity: 2 
         }];
@@ -109,6 +111,7 @@ hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 400'
     done();
 });
 
+var checkoutOrderId_to_cancel;
 hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 200', function(test,done) {
     // create a new order to cancel
     request.post(
@@ -138,6 +141,7 @@ hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 200'
             var redirect = url.parse(res.body.redirect);
             var paths = redirect.pathname.split('/');
             test.request.params.checkoutOrderId = paths[3];
+            checkoutOrderId_to_cancel = paths[3];
             var query = querystring.parse(redirect.query);
             test.request.params.token = query.token;
             test.request.params.method = 'local-psp';
@@ -153,5 +157,15 @@ hooks.before('GET /orders/{orderId} -> 200', function(test,done) {
 
 hooks.before('DELETE /orders/{orderId} -> 200', function(test,done) {
     test.request.params.orderId = store.checkoutOrderId;
+    done();
+});
+
+hooks.before('GET /orders/{orderId}/recalculate -> 200', function(test,done) {
+    test.request.params.orderId = checkoutOrderId_to_cancel;
+    done();
+});
+
+hooks.before('PUT /orders/{orderId}/recalculate -> 200', function(test,done) {
+    test.request.params.orderId = checkoutOrderId_to_cancel;
     done();
 });

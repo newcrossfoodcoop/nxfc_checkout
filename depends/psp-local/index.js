@@ -43,7 +43,7 @@ module.exports = function() {
             },
             'transactions': [{
                 'amount': {
-                    'total': order.total,
+                    'total': order.due,
                     'currency': 'GBP',
                 },
                 'description': 'This is the payment transaction description.' }

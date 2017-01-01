@@ -1,6 +1,9 @@
 'use strict';
 
 var _ = require('lodash');
+var assert = require('assert');
+var path = require('path');
+var debug = require('debug')('depends:mongoose:orders');
 
 /**
  * Module dependencies.
@@ -8,24 +11,40 @@ var _ = require('lodash');
 var mongoose = require('mongoose'),
 	Schema = mongoose.Schema;
 
-var debug = require('debug')('depends:mongoose:orders');
-	
-var path = require('path');
 var productsApi = require(path.resolve('./depends/catalogue')).api.resources.products;
 
 var OrderItemSchema = new Schema({
     _product: { type: Schema.Types.ObjectId, required: true },
     supplierId: { type: Schema.Types.ObjectId, required: true },
-    price: Number,
-    total: Number,
-    name: String,
+    price: { type: Number, required: true },
+    cost: Number,
+    vat: Number,
+    margin: Number,
+    totals: {
+        price: { type: Number, required: true },
+        cost: Number,
+        vat: Number,
+        margin: Number
+    },
+    name: { type: String, required: true },
+    state: {
+        type: String,
+        enum: [
+            'new', 'transmitted', 'reserved', 'finalised', 'refunded', 
+            'cancelled'
+        ],
+        default: 'new'
+    },
+    code: String,
     quantity: {
         type: Number,
         min: 1,
         default: 1,
         required: true
     },
-    validated: Boolean,
+    lookedUp: {
+        type: Date
+    },
     updated: {
 		type: Date,
 		default: Date.now
@@ -36,11 +55,10 @@ var OrderItemSchema = new Schema({
 	},
 });
 
-OrderItemSchema.pre('save', function(next) {
-    var item = this;
-    item.total = item.price * item.quantity;
-    next();
-});
+OrderItemSchema.virtual('total').get(function () { return this.totals.price; });
+
+OrderItemSchema.set('toJSON', { getters: true });
+OrderItemSchema.set('toObject', { getters: true });
 
 /**
  * Order Schema
@@ -48,13 +66,22 @@ OrderItemSchema.pre('save', function(next) {
 var OrderSchema = new Schema({
 	state: {
 		type: String,
-		enum: ['new', 'submitted', 'redirected', 'gotdetails','confirmed', 'cancelled', 'deleted'],
+		enum: [
+		    'new', 'submitted', 'redirected', 'gotdetails', 'paid', 
+		    'confirmed', 'cancelled', 'deleted', 'finalised'
+		],
 		required: true
 	},
 	items: [ OrderItemSchema ],
-	total: {
-	    type: Number,
-	    min: 0
+	totals: {
+        price: { type: Number, required: true },
+        cost: Number,
+        vat: Number,
+        margin: Number
+    },
+	calculated: {
+	    type: Date,
+	    default: Date.now
 	},
 	updated: {
 		type: Date,
@@ -82,57 +109,147 @@ var OrderSchema = new Schema({
 });
 
 OrderSchema.methods.getPayment = function getPayment() {
-    return this.payments[0];
+    return this.payments[this.payments.length - 1];
 };
 
-var Order = mongoose.model('Order', OrderSchema);
-var OrderItem = mongoose.model('OrderItem', OrderItemSchema);
+OrderSchema.virtual('total').get(function () { return this.totals.price; });
+
+OrderSchema.virtual('due').get(function () { return this.total - this.paid; });
+
+OrderSchema.virtual('paid').get(function () { 
+    var order = this;
+    
+    if (!order.payments || order.payments.length === 0) { return 0; }
+    
+    return _.reduce(order.payments, (sum, payment) => { 
+        if (typeof(payment) === 'object') {
+            return sum + payment.paid;
+        }
+        else {
+            throw new Error('cannot calculate paid on unpopulated payments');
+        }
+    },0);
+});
+
+OrderSchema.methods._calculate = function(products, lookedUp) {
+    assert(typeof(products) === 'object', 'products lookup should be an object');
+
+    var order = this;
+    
+    var orderTotals = _(order.items)
+        .map(function(item) {
+            var product = products[item._product];
+            if (product) {
+                if (lookedUp) {
+                    item.cost = product.supplierPrice;
+                    item.price = product.price;
+                    item.vat = product.vat;
+                    item.margin = product.margin;
+                    item.name = product.descName;
+                    item.code = product.supplierCode;
+                    item.supplierId = product.supplier;
+                }
+                
+                item.vat = item.vat || 0;
+                item.price = item.price || 0;
+                item.margin = item.margin || 0;
+                item.cost = item.cost || 0;
+                
+                item.totals = {
+                    price: item.price * item.quantity,
+                    vat: item.vat * item.quantity,
+                    cost: item.cost * item.quantity,
+                    margin: item.margin * item.quantity,
+                };
+            }
+            else {
+                throw new Error('unable to validate item: ', item._product);
+            }
+            
+            if (lookedUp) {
+                item.lookedUp = lookedUp;
+            }
+            
+            if (_.includes(['cancelled', 'refunded'],item.state)) {
+                return { price: 0, vat: 0, cost: 0, margin: 0 };
+            }
+            else {
+                return item.totals;
+            }
+        })
+        .reduce(function(totals,subtots) {
+            return _.transform(totals, (result, value, key) => {
+                result[key] = value + subtots[key];
+            }, {});
+        }, { price: 0, vat: 0, cost: 0, margin: 0 });
+    
+    // Make sure we get a number to at most 2dp
+    var finalTotals = _.transform(orderTotals, (result, value, key) => {
+        result[key] = Number(value.toFixed(2));    
+    }, {});
+    
+    order.totals = finalTotals;
+    order.calculated = Date.now();
+
+    return finalTotals;
+};
+
+OrderSchema.methods.calculateWithoutLookup = function () {
+    var order = this;
+    var products = _.keyBy(order.items,'_product');
+    
+    return order._calculate(products);
+};
+
+OrderSchema.methods.calculate = function calculate() {
+    var order = this;
+
+    var ids = _(order.items)
+        .map('_product')
+        .valueOf();
+
+    debug('Calculating order items: ' + ids);
+    if (ids.length === 0) { throw new Error('No order items Found'); }
+
+    // Essentially we are populating from the catalogue api
+    return productsApi.put(ids).then(function(res) {
+        assert.equal(res.status,200,'Catalogue look up failed: ' + res.body.message);
+        
+        debug(res.body);
+
+        var products = _.keyBy(res.body,'_id');
+        
+        return order._calculate(products, Date.now());
+    });
+};
 
 // Order total is always validated
 OrderSchema.pre('validate', function(next) {
     var order = this;
 
-    // Only validate items that haven't been checked yet
-    var ids = _(order.items)
-        .reject('validated')
-        .map('_product')
-        .valueOf();
-
-    debug('validating order items: ' + ids);
-    if (order.isNew && ids.length === 0) { 
-        throw new Error('No order items Found'); 
+    if (order.isNew) {
+        order
+            .calculate()
+            .then(() => { next(); })
+            .catch(next);
+    }
+    else if (order.isModified('items')) {
+        try {
+            order.calculateWithoutLookup();
+            next();
+        }
+        catch (err) { 
+            next(err); 
+        }
+    }
+    else {
+        next();
     }
 
-    // Essentially we are populating from the catalogue api
-    productsApi.put(ids).then(function(res) {
-        debug(res.body);
-
-        var products = _.keyBy(res.body,'_id');
-        var total = _(order.items)
-            .map(function(item) {
-                var product = products[item._product];
-                if (product) {
-                    item.cost = product.supplierPrice;
-                    item.price = product.price;
-                    item.name = product.name;
-                    item.price = (item.price ? item.price : 0);
-                    item.total = item.price * item.quantity;
-                    item.validated = true;
-                    item.supplierId = product.supplier;
-                }
-                if (!item.validated) {
-                    throw new Error('unable to validate item: ', item._product);
-                }
-                return item.total;
-            })
-            .reduce(function(total,subtot) { return total + subtot; },0);
-        
-        // Make sure we get a number to at most 2dp
-        order.total = Number(total.toFixed(2));
-        
-        next();
-    }).catch(function(err) {
-        next(err);
-    });
-
 });
+
+OrderSchema.set('toJSON', { getters: true });
+OrderSchema.set('toObject', { getters: true });
+
+var Order = mongoose.model('Order', OrderSchema);
+var OrderItem = mongoose.model('OrderItem', OrderItemSchema);

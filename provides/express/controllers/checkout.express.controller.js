@@ -14,6 +14,8 @@ var assert = require('assert');
 
 var debug = require('debug')('provides:express:checkout');
 
+class UserError extends Error {}
+
 var plugins = {};
 
 _.forEach([
@@ -45,7 +47,7 @@ function getActive() {
 }
 
 exports.start = function(req, res) {
-    
+
     var order = new Order(req.body);
     order.user = req.body.user;
     
@@ -57,6 +59,8 @@ exports.start = function(req, res) {
 
     var subController = getSubController(req.params.method);
     
+    // TODO: Check if we should start a new payment, and whether we should close
+    // any previous payments.
     order
         .save()
         .then(() => {
@@ -66,10 +70,14 @@ exports.start = function(req, res) {
                 return {
                     price: item.price,
                     cost: item.cost,
+                    margin: item.margin,
+                    vat: item.vat,
+                    totals: item.totals,
                     quantity: item.quantity,
                     productId: item._product,
                     supplierId: item.supplierId,
-                    name: item.name
+                    name: item.name,
+                    code: item.code
                 };
             });
             
@@ -85,6 +93,7 @@ exports.start = function(req, res) {
         .then((stockPost) => {
             assert.equal(stockPost.status,200,stockPost.body.message);
             order.stockCheckoutId = stockPost.body._id;
+            _.each(order.items,(item) => { item.state = 'transmitted'; });
             return order.save();
         })
         .then(() => {
@@ -95,7 +104,8 @@ exports.start = function(req, res) {
             debug('Recording transaction');
             var payment = new Payment({ 
                 user: req.body.user,
-                method: req.body.method
+                method: req.body.method,
+                amount: order.due
             });
             order.payments.push(payment);
             payment.orderId = order._id;
@@ -127,11 +137,11 @@ function checkState(order, thisState, prevState, callback) {
     var prevStates = typeof prevState === 'object' ? prevState : [prevState];
     
     if (order.state === thisState) {
-        callback(new Error('no state change'),order);
+        callback(new UserError('no state change'),order);
     }
     else if (!_.intersection([order.state], prevStates).length) {
-        callback(new Error(util.format(
-            'invalid state transition %s -> %s', order.state, thisState
+        callback(new UserError(util.format(
+            'invalid checkout state transition %s -> %s', order.state, thisState
         )));
     }
     else {
@@ -171,10 +181,15 @@ exports.redirected = function(req, res) {
     ],
     function(err,result) {
         if (err) {
-            console.error(err.stack);
-            res.status(400).send({
-                message: 'A checkout redirect error has occurred'
-            });
+            res.status(400);
+            if (err instanceof UserError) {
+                res.send({ message: err.message });
+            }
+            else {
+                console.error(err.stack);
+                res.send({ message: 'A checkout redirect error has occurred'});
+            }
+            
         }
         else { 
             return res.jsonp(result); 
@@ -200,6 +215,11 @@ exports.confirm = function(req, res) {
             console.log('record transaction started');
         },
         function(_payment,n,callback) {
+            order.paid = order.paid + _payment.amount;
+            order.state = 'paid';
+            order.save(callback);
+        },
+        function(_order,n,callback) {
             stockCheckoutsApi.checkoutId(order.stockCheckoutId).confirm.get()
                 .then((stockCheckout) => {
                     assert.equal(stockCheckout.status,200,stockCheckout.body.message); 
@@ -208,6 +228,7 @@ exports.confirm = function(req, res) {
                 .catch((err) => { callback(err); });
         },
         function(stockCheckout,callback) {
+            _.each(order.items,(item) => { item.state = 'reserved'; });
             order.state = 'confirmed';
             order.save(callback);
             console.log('order save started');
@@ -247,10 +268,15 @@ exports.cancelled = function(req, res) {
     ],
     function(err,result) {
         if (err) {
-            console.error(err.stack);
-            res.status(400).send({
-                message: 'A checkout cancel error has occurred'
-            });
+            if (err instanceof UserError) {
+                console.error(err);
+                res.status(400).send({ message: err.message });
+            }
+            else {
+                console.error(err.stack);
+                res.status(400).send({ message: 'A checkout redirect error has occurred'});
+            }
+            
         }
         else { 
             return res.jsonp(result); 

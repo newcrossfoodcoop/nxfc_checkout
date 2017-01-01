@@ -16,6 +16,10 @@ module.exports = function(app) {
 		.get(orders.read)
 		.delete(orders.delete);
 
+    app.route('/api/orders/:orderId/recalculate')
+        .get(orders.recalculate)
+        .put(orders.recalculateWithLookup);
+
 	// Finish by binding the Order middleware
 	app.param('orderId', orders.orderByID);
 };

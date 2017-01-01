@@ -97,8 +97,14 @@ exports.list = function(req, res) {
 	    });
 };
 
-exports.history = function(req, res) {
-    Order.find({state: { $ne: 'deleted' }, user: req.user }).sort('-created')
+exports.history = function(req, res, next) {
+    if (! req.user) {
+        return next(new Error('User not found'));
+    }
+    
+    Order.find({state: { $ne: 'deleted' }, user: req.user._id })
+        .select('payments')
+        .sort('-created')
         //.populate('user', 'displayName')
         .exec(function(err, orders) {
 		    if (err) {
@@ -109,6 +115,22 @@ exports.history = function(req, res) {
 			    res.jsonp(orders);
 		    }
 	    });
+};
+
+exports.recalculate = function(req, res) {
+    var order = req.order;
+    
+    order.calculateWithoutLookup();
+    res.jsonp(order);
+};
+
+exports.recalculateWithLookup = function(req, res) {
+    var order = req.order;
+    
+    order
+        .calculate()
+        .then(() => { res.jsonp(order); })
+        .catch((err) => { res.status(400).send(err.message); });
 };
 
 /**

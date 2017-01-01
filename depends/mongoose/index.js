@@ -11,13 +11,17 @@ var	mongoose = require('mongoose');
 var config = require('./config');
 var glob = require('glob');
 
+var _loaded = null;
 // Load the mongoose models
 exports.loadModels = function() {
+    if (_loaded) { return; }
+    
 	// Globbing model files
 	glob.sync(config.depends.mongoose.models)
 	    .forEach(function(file) {
 		    require(path.resolve(file));
 		});
+	_loaded = true;
 };
 
 // Initialize Mongoose

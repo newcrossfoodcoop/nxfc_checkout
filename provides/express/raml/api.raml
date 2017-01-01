@@ -162,9 +162,24 @@ resourceTypes:
                 application/json:
                   schema: Order
             400:
-              description: Order can no longer cancelled via the checkout.
+              description: Order can no longer be cancelled via the checkout.
 /orders:
   displayName: Orders
   type: { typedMemberCollection: { schema: Order } }
   /{orderId}:
     type: { typedMember: { schema: Order } }
+    /recalculate:
+      get:
+        description: Recalculate this order without looking up products
+        responses:
+          200:
+            body:
+              application/json:
+                schema: Order 
+      put:
+        description: Recalculate this order, looks up CURRENT product details
+        responses:
+          200:
+            body:
+              application/json:
+                schema: Order 
