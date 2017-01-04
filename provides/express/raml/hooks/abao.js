@@ -297,6 +297,7 @@ hooks.before('GET /checkout/{method}/{checkoutOrderId}/close -> 200', function(t
 
 hooks.after('GET /checkout/{method}/{checkoutOrderId}/close -> 200', function(test,done) {
     assert.equal(test.response.body.state, 'closed');
-    assert.equal(test.response.body.due, -16.01);
+    assert.equal(test.response.body.due, 0);
+    assert.equal(test.response.body.items[1].state, 'refunded');
     done();
 });
