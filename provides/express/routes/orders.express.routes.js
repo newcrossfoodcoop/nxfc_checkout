@@ -9,12 +9,15 @@ module.exports = function(app) {
 		.get(orders.list);
 		//.post(orders.create);
 
-    app.route('/api/orders/history')
+    app.route('/api/orders/history/:orderUserId')
         .get(orders.history);
 
 	app.route('/api/orders/:orderId')
 		.get(orders.read)
 		.delete(orders.delete);
+		
+	app.route('/api/orders/:orderId/finalise')
+		.put(orders.finalise);
 
     app.route('/api/orders/:orderId/recalculate')
         .get(orders.recalculate)
@@ -22,4 +25,5 @@ module.exports = function(app) {
 
 	// Finish by binding the Order middleware
 	app.param('orderId', orders.orderByID);
+	app.param('orderUserId', orders.ordersByUserID);
 };

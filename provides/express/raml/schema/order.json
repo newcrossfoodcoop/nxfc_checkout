@@ -5,7 +5,7 @@
     "properties": {        
 	    "state": {
 	        "type": "string",
-	        "enum": ["new", "submitted", "redirected", "gotdetails","confirmed", "cancelled", "deleted"],
+	        "enum": ["new", "submitted", "redirected", "gotdetails","confirmed", "cancelled", "deleted", "finalised", "closed"],
 	        "required": true
 	    },
 	    "items": {
@@ -62,7 +62,7 @@
 	                                    "properties": {
 	                                        "name": {
 	                                            "type": "string",
-	                                            "enum": ["initial", "info", "details", "confirmation", "cancelled"],
+	                                            "enum": ["initial", "info", "details", "confirmation", "cancelled", "refund"],
 	                                            "required": "true"
 	                                        },
 	                                        "date": {

@@ -9,7 +9,7 @@ var mongoose = require('mongoose'),
 
 
 var schemaVersion = 1;
-var transactionStates = ['initial', 'info', 'details', 'confirmation', 'cancelled'];
+var transactionStates = ['initial', 'info', 'details', 'confirmation', 'cancelled', 'refund'];
 var transactionParams = {
     log: { 
         type: [{ 
@@ -48,6 +48,10 @@ var PaymentSchema = new Schema({
         type: Number,
         required: true
     },
+    refund: {
+        type: Number,
+        default: 0
+    },
     transactions: transactionParams,
     updated: {
 		type: Date,
@@ -82,26 +86,21 @@ PaymentSchema.pre('init', function(next) {
     next();
 });
 
-
-// That's all wrong!
-//PaymentSchema.virtual('amount').get(function() {
-//    var payment = this;
-//    return _.reduce(payment.transactions, (sum, transaction) => { return sum + transaction.amount.total; });
-//});
-
 PaymentSchema.virtual('paid').get(function() {
     var payment = this;
-    if (payment.state === 'confirmation') {
-        return payment.amount;
-    }
-    else {
-        return 0;
+    switch(payment.state) {
+        case 'confirmation':
+            return payment.amount;
+        case 'refund':
+            return Number((payment.amount - payment.refund).toFixed(2));
+        default:
+            return 0;
     }
 });
 
 PaymentSchema.virtual('pending').get(function() {
     var payment = this;
-    if (_.includes(['confirmation', 'cancelled'],payment.state)) {
+    if (_.includes(['confirmation', 'cancelled', 'refund'],payment.state)) {
         return 0;   
     }
     else {

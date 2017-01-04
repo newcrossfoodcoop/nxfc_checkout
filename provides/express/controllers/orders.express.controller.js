@@ -4,10 +4,12 @@
  * Module dependencies.
  */
 
-var mongoose = require('mongoose'),
-	Order = mongoose.model('Order'),
-	Payment = mongoose.model('Payment'),
-	_ = require('lodash');
+var mongoose = require('mongoose');
+var assert = require('assert');
+var _ = require('lodash');
+
+var	Order = mongoose.model('Order'),
+	Payment = mongoose.model('Payment');
 
 /**
  * Get the error message from error object
@@ -98,23 +100,8 @@ exports.list = function(req, res) {
 };
 
 exports.history = function(req, res, next) {
-    if (! req.user) {
-        return next(new Error('User not found'));
-    }
-    
-    Order.find({state: { $ne: 'deleted' }, user: req.user._id })
-        .select('payments')
-        .sort('-created')
-        //.populate('user', 'displayName')
-        .exec(function(err, orders) {
-		    if (err) {
-			    return res.send(400, {
-				    message: getErrorMessage(err)
-			    });
-		    } else {
-			    res.jsonp(orders);
-		    }
-	    });
+    var orders = req.orders;
+    res.jsonp(orders);
 };
 
 exports.recalculate = function(req, res) {
@@ -133,6 +120,66 @@ exports.recalculateWithLookup = function(req, res) {
         .catch((err) => { res.status(400).send(err.message); });
 };
 
+exports.finalise = function(req, res) {
+    var order = req.order;
+    
+    Promise.resolve()
+        .then(() => { 
+            assert.equal(order.state, 'confirmed', 'Can only finalised confirmed orders'); 
+        })
+        .then(() => {
+            var items = req.body;
+        
+            // Process each action
+            _.forEach(items, (item) => {
+                var orderItem = _.find(order.items, (oi) => { return oi._product.toString() === item.productId; } );
+                assert.ok(orderItem, 'order item not found: ' + item.productId);
+                assert.equal(orderItem.quantity, item.quantity, item.productId + 'quantity mismatch');
+                switch(item.action) {
+                    case 'cancel':
+                        orderItem.state = 'cancelled';
+                        break;
+                    case 'finalise':
+                        orderItem.state = 'finalised';
+                        break;
+                    default:
+                        throw new Error('unrecognised action: ' + item.action);
+                }
+            });
+            
+        })
+        .then(() => { order.calculateWithoutLookup(); })
+        .then(() => {
+            
+            // Check order state
+            var remaining = _.reject(order.items, (item) => { 
+                switch(item.state) {
+                    case 'finalised':
+                    case 'cancelled':
+                    case 'refunded':
+                        return true;
+                    default:
+                        return false;
+                } 
+            });
+            
+            if (remaining.length === 0 ) {
+                if (order.due === 0) {
+                    order.state = 'closed';
+                }
+                else {
+                    order.state = 'finalised';
+                }
+            }
+            else {
+                console.error('Order not finalised: ' + order._id);
+            }
+        })
+        .then(() => { return order.save(); })
+        .then(() => { res.jsonp(order); })
+        .catch((err) => { res.status(400).send({ message: err.message }); });
+};
+
 /**
  * Order middleware
  */
@@ -147,4 +194,16 @@ exports.orderByID = function(req, res, next, id) {
 		        req.order = order ;
 		        next();
 	        });
+};
+
+exports.ordersByUserID = function(req, res, next, id) {
+    Order.find({state: { $ne: 'deleted' }, user: id })
+//        .select('payments')
+        .sort('-created')
+        //.populate('user', 'displayName')
+        .exec(function(err, orders) {
+            if (err) return next(err);
+            req.orders = orders;
+            next();
+	    });
 };

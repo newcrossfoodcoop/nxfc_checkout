@@ -19,7 +19,11 @@ module.exports = function(app) {
 	
 	app.route('/api/checkout/:method/:checkoutOrderId/:token/cancelled')
 	    .put(checkout.cancelled);
+	
+	app.route('/api/checkout/:method/:checkoutOrderId/close')
+	    .get(checkout.close);
 
 	// Finish by binding the Order middleware
 	app.param('checkoutOrderId', checkout.orderByID);
+	app.param('token', checkout.checkToken);
 };

@@ -68,7 +68,7 @@ var OrderSchema = new Schema({
 		type: String,
 		enum: [
 		    'new', 'submitted', 'redirected', 'gotdetails', 'paid', 
-		    'confirmed', 'cancelled', 'deleted', 'finalised'
+		    'confirmed', 'cancelled', 'deleted', 'finalised', 'closed'
 		],
 		required: true
 	},
@@ -114,7 +114,7 @@ OrderSchema.methods.getPayment = function getPayment() {
 
 OrderSchema.virtual('total').get(function () { return this.totals.price; });
 
-OrderSchema.virtual('due').get(function () { return this.total - this.paid; });
+OrderSchema.virtual('due').get(function () { return Number((this.total - this.paid).toFixed(2)); });
 
 OrderSchema.virtual('paid').get(function () { 
     var order = this;

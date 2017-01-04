@@ -31,7 +31,7 @@ var LocalPSPSchema = new Schema({
                     default: 'GBP'
                 }
             },
-            'description': String 
+            'description': String
         }],
         default: []
     },
@@ -41,7 +41,7 @@ var LocalPSPSchema = new Schema({
     },
     'state': {
         type: String,
-        enum: ['initial', 'done'],
+        enum: ['initial', 'done', 'refund'],
         default: 'initial',
         required: 'MISSING STATE'
     }

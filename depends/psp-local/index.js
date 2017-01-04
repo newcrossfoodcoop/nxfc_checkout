@@ -74,14 +74,37 @@ module.exports = function() {
     exports.capturePayment = function capturePayment(order,callback) {
         var payment = order.getPayment();
         var paymentId = payment.transactions.initial._id;
+        
         LocalPSP.findById(paymentId).exec(function(err,pspRecord) {
             if (err) return callback(err);
             if (pspRecord.state !== 'initial') return callback(new Error('not in initial state'));
             pspRecord.state = 'done';
             pspRecord.save(function(_err){
-                callback(_err,{ state: 'done' });
+                callback(_err,pspRecord);
             });
         });
+    };
+    
+    exports.refund = function refund(order, amount, callback) {
+        var payment = order.getPayment();
+        var paymentId = payment.transactions.initial._id;
+        
+        LocalPSP
+            .findById(paymentId)
+            .exec()
+            .then((pspRecord) => {
+                var saleAmount = pspRecord.transactions[0].amount.total;
+                if (amount > saleAmount) {
+                    throw new Error('Refund too large for this sale');
+                }
+                
+                payment.refund = amount;
+                pspRecord.transactions.push({amount: { total: amount }});
+                pspRecord.state = 'refund';
+                return pspRecord.save();
+            })
+            .then((doc) => { callback(null,doc); })
+            .catch((err) => { callback(err); });
     };
 
     //TODO 

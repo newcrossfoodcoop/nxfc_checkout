@@ -79,6 +79,14 @@ describe('Payment Model Unit Tests:', () => {
             payment.amount.should.equal(1.03);
             payment.pending.should.equal(0);
         });
+        
+        it('payment.pending should be equal to 0 when refunded', () => {
+            payment.state = 'refund';
+            payment.refund = 0.50;
+            payment.paid.should.equal(0.53);
+            payment.amount.should.equal(1.03);
+            payment.pending.should.equal(0);
+        });
     });
 
 	afterEach((done) => { 

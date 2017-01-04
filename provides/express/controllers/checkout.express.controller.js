@@ -215,7 +215,7 @@ exports.confirm = function(req, res) {
             console.log('record transaction started');
         },
         function(_payment,n,callback) {
-            order.paid = order.paid + _payment.amount;
+//            order.paid = order.paid + _payment.amount;
             order.state = 'paid';
             order.save(callback);
         },
@@ -284,6 +284,50 @@ exports.cancelled = function(req, res) {
     });
 };
 
+exports.close = function(req, res) {
+    var order = req.order;
+    
+    var subController = getSubController(req.params.method);
+    
+    Promise.resolve(thenify(checkState)(order,'closed','finalised'))
+        .then(() => {
+            // check how much is due, do nothing if 0, refund if -, throw error if +
+            
+            if (order.due > 0) {
+                throw new Error('Requesting further funds is not supported');
+            }
+            
+            if (order.due < 0){
+                return thenify(subController.refund)(order,(order.due * -1))
+                    .then((pspRes) => {
+                        var payment = order.getPayment();
+                        var record = thenify(payment.recordTransaction);
+                        return record.apply(payment,['refund',pspRes]);
+                    })
+                    .then(() => { return order.save(); });
+            }
+        })
+        .then(() => {
+            assert(order.due === 0, 'Order.due still not 0, not closing');
+            
+            // mark all cancelled items as refunded
+            _(order.items)
+                .filter({state: 'cancelled'})
+                .forEach((item) => { item.state = 'refunded'; });
+            
+            order.state = 'closed';
+            return order.save();
+        })
+        .then(() => {
+            res.jsonp(order);
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(400).send({ message: 'A checkout error has occured' });
+        });
+        
+};
+
 exports.orderByID = function(req, res, next, id) {
     var subController = getSubController(req.params.method);
     var populateArgs = subController.populatePaymentsArgs(req, req.params.token);
@@ -296,10 +340,16 @@ exports.orderByID = function(req, res, next, id) {
         .exec(function(err, order) {
 	        if (err) return next(err);
 	        if (! order) return next(new Error('Failed to load Order ' + id));
-	        if (subController.rejectToken(order,req,req.params.token)) return next(new Error('token mismatch'));
 	        req.order = order;
 	        next();
         });
+};
+
+exports.checkToken = function(req, res, next, token) {
+    var subController = getSubController(req.params.method);
+    var order = req.order;
+    if (subController.rejectToken(order,req,token)) { return next(new Error('token mismatch')); }
+    next();
 };
 
 exports.config = function(req, res, next) {

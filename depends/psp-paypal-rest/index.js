@@ -59,8 +59,15 @@ module.exports = function() {
                     'total': order.due,
                     'currency': 'GBP',
                 },
-                'description': 'Payment for goods from website' }
-            ],
+                'description': 'Payment for goods from website',
+                'item_list': [{
+                    'items': _.map(order.items, (item) => { return {
+                        quantity: item.quantity,
+                        name: item.name,
+                        price: item.totals.price
+                    }; }) 
+                }] 
+            }],
             'redirect_urls': {
                 return_url: util.format(config.returnUrl, order._id),
                 cancel_url: util.format(config.cancelUrl, order._id),
@@ -90,6 +97,17 @@ module.exports = function() {
         var payment = order.getPayment();
         var paypalPaymentId = payment.transactions.initial.id;
         paypal.payment.execute(paypalPaymentId, {payer_id: payment.transactions.info.PayerID}, callback);
+    };
+    
+    exports.refund = function refund(order, amount, callback) {
+        var payment = order.getPayment();
+        var saleId = payment.transactions.confirmation.transactions[0].related_resources.sale.id;
+        var saleAmount = payment.transactions.confirmation.transactions[0].related_resources.sale.amount.total;
+        if (amount > saleAmount) {
+            return callback(new Error('Refund too large for this sale'));
+        }
+        payment.refund = amount;
+        paypal.sale.refund(saleId,{amount: { total: amount, currency: 'GBP' }},callback);
     };
 
     //TODO 

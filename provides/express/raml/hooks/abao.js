@@ -7,19 +7,21 @@ var path = require('path');
 var url = require('url');
 var querystring = require('querystring');
 var request = require('request');
+var randomstring = require('randomstring');
+var util = require('util');
 
 var products = require(path.resolve('./depends/catalogue')).api.resources.products;
 var suppliers = require(path.resolve('./depends/catalogue')).api.resources.suppliers;
 var pickups = require(path.resolve('./depends/stock')).api.resources.pickups;
 
-var store = {
-    user: {
-        _id: '57c4b1ba1abb0114001963c5',
-        username: 'checkoutdummy',
-        displayName: 'Checkout Dummy',
-        email: 'checkout@dummy.com'
-    }
+var dummyUser = { 
+    _id: randomstring.generate({ length: 24, charset: 'hex' }),
+    username: 'checkoutdummy',
+    displayName: 'Checkout Dummy',
+    email: 'checkout@dummy.com'
 };
+
+var pickup, product, supplier, product_to_cancel;
 
 hooks.before('POST /checkout/{method} -> 200', function(test, done) {
     test.request.params.method = 'local-psp';
@@ -33,55 +35,82 @@ hooks.before('POST /checkout/{method} -> 200', function(test, done) {
     })
     .then((res) => {
         assert.equal(res.status,200,'failed to create pickup: ' + res.body.message);
-        store.pickup = res.body;
+        pickup = res.body;
         return suppliers.post({
             name: 'foofactory'
         });
     })
     .then((res) => {
         assert.equal(res.status,200,'failed to create supplier: ' + res.body.message);
+        supplier = res.body;
+    })
+    .then(() => {
         //create a product to order
         return products.post({
             name: 'foomania',
             supplierPrice: 13.41,
-            supplier: res.body._id
+            supplier: supplier._id
         });
     })
-    .then(function(res) {
+    .then((res) => {
         assert.equal(res.status,200,'failed to create product: ' + res.body.message);
-        store.product = res.body;
-        test.request.body.pickupId = store.pickup._id;
+        product = res.body;
+    })
+    .then(() => {
+        //create a product to order
+        return products.post({
+            name: 'cancelmania',
+            supplierPrice: 16.01,
+            supplier: supplier._id
+        });
+    })
+    .then((res) => {
+        assert.equal(res.status,200,'failed to create product to cancel: ' + res.body.message);
+        product_to_cancel = res.body;
+    })
+    .then(() => {
+        test.request.body.pickupId = pickup._id;
         test.request.body.items = [{
-            _product: res.body._id, 
-            price: res.body.price,
-            name: res.body.descName,
-            supplierId: res.body.supplier,
+            _product: product._id, 
+            price: product.price,
+            name: product.descName,
+            supplierId: product.supplier,
             total: 9, 
             quantity: 2 
         }];
-        test.request.body.user = store.user;
+        test.request.body.user = dummyUser;
         done();
     })
     .catch((err) => { console.error(err); done(); });
 });
 
 //{ redirect: 'http://localhost:3030/checkout/local-psp/580e719f6b3d1e0abb07e640/redirected?token=TOKEN&PayerID=localpayer' }
-hooks.after('POST /checkout/{method} -> 200', function(test, done) {
-    var redirect = url.parse(test.response.body.redirect);
+function parseRedirectUrl(redirectUrl) {
+    var parsed = {};
+    var redirect = url.parse(redirectUrl);
     var paths = redirect.pathname.split('/');
-    store.method = paths[2];
-    store.checkoutOrderId = paths[3];
+    parsed.method = paths[2];
+    parsed.checkoutOrderId = paths[3];
     var query = querystring.parse(redirect.query);
-    store.token = query.token;
-    store.PayerID = query.PayerID;
+    parsed.token = query.token;
+    parsed.PayerID = query.PayerID;
+    
+    return parsed;
+}
+
+var checkout = {};
+
+//{ redirect: 'http://localhost:3030/checkout/local-psp/580e719f6b3d1e0abb07e640/redirected?token=TOKEN&PayerID=localpayer' }
+hooks.after('POST /checkout/{method} -> 200', function(test, done) {
+    checkout = parseRedirectUrl(test.response.body.redirect);
     done();
 });
 
 hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/redirected -> 200', function(test,done) {
     test.request.params.method = 'local-psp';
-    test.request.params.checkoutOrderId = store.checkoutOrderId;
-    test.request.params.token = store.token;
-    test.request.body = { token: store.token };
+    test.request.params.checkoutOrderId = checkout.checkoutOrderId;
+    test.request.params.token = checkout.token;
+    test.request.body = { token: checkout.token };
     done();
 });
 
@@ -94,8 +123,8 @@ hooks.after('PUT /checkout/{method}/{checkoutOrderId}/{token}/redirected -> 200'
 
 hooks.before('GET /checkout/{method}/{checkoutOrderId}/{token}/confirm -> 200', function(test, done) {
     test.request.params.method = 'local-psp';
-    test.request.params.checkoutOrderId = store.checkoutOrderId;
-    test.request.params.token = store.token;
+    test.request.params.checkoutOrderId = checkout.checkoutOrderId;
+    test.request.params.token = checkout.token;
     done();
 });
 
@@ -106,8 +135,8 @@ hooks.after('GET /checkout/{method}/{checkoutOrderId}/{token}/confirm -> 200', f
 
 hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 400', function(test,done) {
     test.request.params.method = 'local-psp';
-    test.request.params.checkoutOrderId = store.checkoutOrderId;
-    test.request.params.token = store.token;
+    test.request.params.checkoutOrderId = checkout.checkoutOrderId;
+    test.request.params.token = checkout.token;
     done();
 });
 
@@ -120,17 +149,17 @@ hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 200'
             form: {
                 state: 'new',
                 items: [{ 
-                    _product: store.product.id, 
-                    price: store.product.price,
-                    total: store.product.price, 
-                    name: store.product.name,
+                    _product: product.id, 
+                    price: product.price,
+                    total: product.price, 
+                    name: product.name,
                     quantity: 1
                 }],
-                total : store.product.price,
-                user: store.user,
+                total : product.price,
+                user: dummyUser,
                 orderType: 'customer',
                 method: 'local-psp',
-                pickupId: store.pickup._id 
+                pickupId: pickup._id 
             }, 
             json: true
         },
@@ -138,25 +167,24 @@ hooks.before('PUT /checkout/{method}/{checkoutOrderId}/{token}/cancelled -> 200'
             assert.ifError(err);
             assert.equal(res.statusCode, 200);
             
-            var redirect = url.parse(res.body.redirect);
-            var paths = redirect.pathname.split('/');
-            test.request.params.checkoutOrderId = paths[3];
-            checkoutOrderId_to_cancel = paths[3];
-            var query = querystring.parse(redirect.query);
-            test.request.params.token = query.token;
-            test.request.params.method = 'local-psp';
+            var redirect = parseRedirectUrl(res.body.redirect);
+            test.request.params.checkoutOrderId = redirect.checkoutOrderId;
+            checkoutOrderId_to_cancel = redirect.checkoutOrderId;
+            test.request.params.token = redirect.token;
+            test.request.params.method = redirect.method;
+            
             done();
         }
     );
 });
 
 hooks.before('GET /orders/{orderId} -> 200', function(test,done) {
-    test.request.params.orderId = store.checkoutOrderId;
+    test.request.params.orderId = checkout.checkoutOrderId;
     done();
 });
 
 hooks.before('DELETE /orders/{orderId} -> 200', function(test,done) {
-    test.request.params.orderId = store.checkoutOrderId;
+    test.request.params.orderId = checkout.checkoutOrderId;
     done();
 });
 
@@ -167,5 +195,108 @@ hooks.before('GET /orders/{orderId}/recalculate -> 200', function(test,done) {
 
 hooks.before('PUT /orders/{orderId}/recalculate -> 200', function(test,done) {
     test.request.params.orderId = checkoutOrderId_to_cancel;
+    done();
+});
+
+hooks.before('GET /orders/history/{orderUserId} -> 200', function(test,done) {
+    test.request.params.orderUserId = dummyUser._id;
+    done();
+});
+
+hooks.after('GET /orders/history/{orderUserId} -> 200', function(test,done) {
+    assert(test.response.body.length > 0);
+    done();
+});
+
+var checkout_to_finalise;
+hooks.after('POST /checkout/{method} -> 200', function(test, done) {
+    test.request.body.items.push({
+        _product: product_to_cancel.id, 
+        price: product_to_cancel.price,
+        total: product_to_cancel.price, 
+        name: product_to_cancel.name,
+        quantity: 1
+    });
+
+    request.post(
+        test.request.server + '/checkout/local-psp',
+        {form: test.request.body, json: true},
+        function(err,res,bod) {
+            checkout_to_finalise = parseRedirectUrl(bod.redirect);
+            done();
+        }
+    );
+});
+
+hooks.after('PUT /checkout/{method}/{checkoutOrderId}/{token}/redirected -> 200', function(test,done) {
+    test.request.params.method = 'local-psp';
+    test.request.params.checkoutOrderId = checkout.checkoutOrderId;
+    test.request.params.token = checkout.token;
+    test.request.body = { token: checkout.token };
+    
+    request.put(
+        test.request.server + util.format(
+            '/checkout/%s/%s/%s/redirected', 
+            checkout_to_finalise.method,
+            checkout_to_finalise.checkoutOrderId,
+            checkout_to_finalise.token
+        ),
+        {form: { token: checkout_to_finalise.token }, json: true},
+        function(err,res,bod) {
+            assert.equal(test.response.body.state,'gotdetails');
+            done();
+        }
+    );
+});
+
+hooks.after('GET /checkout/{method}/{checkoutOrderId}/{token}/confirm -> 200', function(test, done) {    
+    request.get(
+        test.request.server + util.format(
+            '/checkout/%s/%s/%s/confirm', 
+            checkout_to_finalise.method,
+            checkout_to_finalise.checkoutOrderId,
+            checkout_to_finalise.token
+        ),
+        function(err,res,bod) {
+            assert.equal(test.response.body.state,'confirmed');
+            done();
+        }
+    );
+});
+
+hooks.before('PUT /orders/{orderId}/finalise -> 200', function(test,done) {
+    test.request.params.orderId = checkout_to_finalise.checkoutOrderId;
+    test.request.body = [{
+        productId: product._id,
+        quantity: 2,
+        action: 'finalise'
+    }, {
+        productId: product_to_cancel._id,
+        quantity: 1,
+        action: 'cancel'
+    }];
+    done();
+});
+
+hooks.after('PUT /orders/{orderId}/finalise -> 200', function(test,done) {
+    assert.equal(test.response.body.state, 'finalised');
+    assert.equal(test.response.body.due, -16.01);
+    done();
+});
+
+hooks.before('PUT /orders/{orderId}/finalise -> 400', function(test,done) {
+    test.request.params.orderId = checkoutOrderId_to_cancel;
+    done();
+});
+
+hooks.before('GET /checkout/{method}/{checkoutOrderId}/close -> 200', function(test,done) {
+    test.request.params.checkoutOrderId = checkout_to_finalise.checkoutOrderId;
+    test.request.params.method = checkout_to_finalise.method;
+    done();
+});
+
+hooks.after('GET /checkout/{method}/{checkoutOrderId}/close -> 200', function(test,done) {
+    assert.equal(test.response.body.state, 'closed');
+    assert.equal(test.response.body.due, -16.01);
     done();
 });
