@@ -107,7 +107,16 @@ module.exports = function() {
             return callback(new Error('Refund too large for this sale'));
         }
         payment.refund = amount;
-        paypal.sale.refund(saleId,{amount: { total: amount, currency: 'GBP' }},callback);
+        paypal.sale.refund(
+            saleId,{amount: { total: amount, currency: 'GBP' }},
+            function(err,ppRes) {
+                if (err) { return callback(err,ppRes); }
+                if (ppRes.refund_from_transaction_fee) {
+                    payment.transactionFee = payment.transactionFee - ppRes.refund_from_transaction_fee.value;
+                }
+                callback(null,ppRes);
+            }
+        );
     };
 
     //TODO 

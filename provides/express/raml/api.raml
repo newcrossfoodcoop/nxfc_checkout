@@ -207,7 +207,7 @@ resourceTypes:
                 "$schema": "http://json-schema.org/draft-03/schema#", 
                 "type": "array",
                 "properties": {
-                  "productId": { "type": "string", "required": true },
+                  "productId": { "type": "string", "required": true, "pattern": "^[a-f0-9]{24}$" },
                   "quantity": { "type": "integer", "required": true },
                   "action": { 
                     "type": "string", 

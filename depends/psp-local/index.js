@@ -99,7 +99,10 @@ module.exports = function() {
                 }
                 
                 payment.refund = amount;
-                pspRecord.transactions.push({amount: { total: amount }});
+                pspRecord.transactions.push({
+                    description: 'This is a refund',
+                    amount: { total: amount * -1 }}
+                );
                 pspRecord.state = 'refund';
                 return pspRecord.save();
             })

@@ -8,7 +8,7 @@ var mongoose = require('mongoose'),
 	_ = require('lodash');
 
 
-var schemaVersion = 1;
+var schemaVersion = 2;
 var transactionStates = ['initial', 'info', 'details', 'confirmation', 'cancelled', 'refund'];
 var transactionParams = {
     log: { 
@@ -52,6 +52,10 @@ var PaymentSchema = new Schema({
         type: Number,
         default: 0
     },
+    transactionFee: {
+        type: Number,
+        default: 0
+    },
     transactions: transactionParams,
     updated: {
 		type: Date,
@@ -67,16 +71,30 @@ var PaymentSchema = new Schema({
 	}
 });
 
+// TODO: Really need to have a sub(class/models) of the payment object per psp to extra
+// useful data from the psp responses
+
 // set amount on payments with no amount set (old payments);
 PaymentSchema.pre('init', function(next) {
     var payment = this;
     if (payment.schemaVersion === schemaVersion) { return next(); }
     
+    var version = payment.schemaVersion || 0;
     try {
-        // version 1 - amount field added
-        if (!payment.schemaVersion) {
-            payment.amount = payment.transactions.initial.transactions[0].amount.total;
-            payment.schemaVersion = 1;
+        switch(version) {
+            case 0:
+                payment.amount = payment.transactions.initial.transactions[0].amount.total;
+                /* falls through */
+            case 1:
+                if (payment.transactions.confirmation && payment.transactions.confirmation.transactions[0]) {
+                    var txn = payment.transactions.confirmation.transactions[0];
+                    payment.transactionFee = txn.related_resources.sale.transaction_fee.value;
+                }
+                /* falls through */
+            default:
+                if (payment.schemaVersion !== schemaVersion) {
+                    payment.schemaVersion = schemaVersion;
+                }
         }
     } catch (err) {
         return next(err);
