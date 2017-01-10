@@ -101,7 +101,7 @@ exports.list = function(req, res) {
 
 exports.history = function(req, res, next) {
     var orders = req.orders;
-    res.jsonp(orders);
+    res.jsonp(_.map(orders,(order) => { return _.omit(order,'payments'); }));
 };
 
 exports.recalculate = function(req, res) {
@@ -200,6 +200,7 @@ exports.ordersByUserID = function(req, res, next, id) {
     Order.find({state: { $ne: 'deleted' }, user: id })
 //        .select('payments')
         .sort('-created')
+        .populate('payments')
         //.populate('user', 'displayName')
         .exec(function(err, orders) {
             if (err) return next(err);
