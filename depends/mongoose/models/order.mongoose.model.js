@@ -185,12 +185,17 @@ OrderSchema.methods._calculate = function(products, lookedUp) {
                 item.margin = item.margin || 0;
                 item.cost = item.cost || 0;
                 
-                item.totals = {
-                    price: item.price * item.quantity,
-                    vat: item.vat * item.quantity,
-                    cost: item.cost * item.quantity,
-                    margin: item.margin * item.quantity,
-                };
+                if (_.includes(['cancelled', 'refunded'],item.state)) {
+                    item.totals = { price: 0, vat: 0, cost: 0, margin: 0 };
+                }
+                else {
+                    item.totals = {
+                        price: item.price * item.quantity,
+                        vat: item.vat * item.quantity,
+                        cost: item.cost * item.quantity,
+                        margin: item.margin * item.quantity,
+                    };
+                }
             }
             else {
                 throw new Error('unable to validate item: ', item._product);
@@ -200,12 +205,7 @@ OrderSchema.methods._calculate = function(products, lookedUp) {
                 item.lookedUp = lookedUp;
             }
             
-            if (_.includes(['cancelled', 'refunded'],item.state)) {
-                return { price: 0, vat: 0, cost: 0, margin: 0 };
-            }
-            else {
-                return item.totals;
-            }
+            return item.totals;
         })
         .reduce(function(totals,subtots) {
             return _.transform(totals, (result, value, key) => {

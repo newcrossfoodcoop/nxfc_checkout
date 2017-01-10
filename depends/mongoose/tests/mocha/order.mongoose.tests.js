@@ -82,6 +82,15 @@ describe('Order Model Unit Tests:', () => {
                 });
             });
         });
+        
+        it('should be able to cancel a product', () => {
+            order.items[0].state = 'cancelled';
+            return order.calculate().then((totals) => {
+                totals.should.be.deepEqual({
+                    price: 31, vat: 0, cost: 25, margin: 0.5
+                });
+            });
+        });
     });
 
 	afterEach((done) => { 

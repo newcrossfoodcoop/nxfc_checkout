@@ -101,7 +101,7 @@ exports.list = function(req, res) {
 
 exports.history = function(req, res, next) {
     var orders = req.orders;
-    res.jsonp(_.map(orders,(order) => { return _.omit(order,'payments'); }));
+    res.jsonp(_.map(orders,(order) => { return _.omit(order.toObject(),'payments'); }));
 };
 
 exports.recalculate = function(req, res) {

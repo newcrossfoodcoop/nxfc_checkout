@@ -205,6 +205,7 @@ hooks.before('GET /orders/history/{orderUserId} -> 200', function(test,done) {
 
 hooks.after('GET /orders/history/{orderUserId} -> 200', function(test,done) {
     assert(test.response.body.length > 0);
+    assert(!test.response.body[0].payments);
     done();
 });
 
