@@ -131,6 +131,36 @@ OrderSchema.virtual('paid').get(function () {
     },0);
 });
 
+OrderSchema.virtual('refund').get(function () {
+    var order = this;
+
+    if (!order.payments || order.payments.length === 0) { return 0; }
+    
+    return _.reduce(order.payments, (sum, payment) => { 
+        if (typeof(payment) === 'object') {
+            return sum + payment.refund;
+        }
+        else {
+            throw new Error('cannot calculate paid on unpopulated payments');
+        }
+    },0);
+});
+
+OrderSchema.virtual('transactionFee').get(function () {
+    var order = this;
+
+    if (!order.payments || order.payments.length === 0) { return 0; }
+    
+    return _.reduce(order.payments, (sum, payment) => { 
+        if (typeof(payment) === 'object') {
+            return sum + payment.transactionFee;
+        }
+        else {
+            throw new Error('cannot calculate paid on unpopulated payments');
+        }
+    },0);
+});
+
 OrderSchema.methods._calculate = function(products, lookedUp) {
     assert(typeof(products) === 'object', 'products lookup should be an object');
 
