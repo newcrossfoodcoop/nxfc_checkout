@@ -48,9 +48,9 @@ describe('Order Model Unit Tests:', () => {
 		    user: randomstring.generate({ length: 24, charset: 'hex' }),
 		    state: 'new',
 		    items: [
-		        { _product: randomstring.generate({ length: 24, charset: 'hex' }) },
-		        { _product: randomstring.generate({ length: 24, charset: 'hex' }) },
-		        { _product: randomstring.generate({ length: 24, charset: 'hex' }) }
+		        { _product: randomstring.generate({ length: 24, charset: 'hex' }), price: 1 },
+		        { _product: randomstring.generate({ length: 24, charset: 'hex' }), price: 2 },
+		        { _product: randomstring.generate({ length: 24, charset: 'hex' }), price: 3 }
 		    ]
 		});
 
@@ -90,6 +90,19 @@ describe('Order Model Unit Tests:', () => {
                     price: 31, vat: 0, cost: 25, margin: 0.5
                 });
             });
+        });
+    });
+    
+    describe('Init', () => {
+        it('should be able to set schemaVersion', () => {
+            return order.init(order.toObject())
+                .then(() => {
+                    order.totals.should.be.type('object');
+                })
+                .then(() => {
+                    // Expect to update the value on schemaVersion change                
+                    order.schemaVersion.should.equal(1);
+                });
         });
     });
 

@@ -7,8 +7,6 @@ var mongoose = require('mongoose'),
 	Schema = mongoose.Schema,
 	_ = require('lodash');
 
-
-var schemaVersion = 2;
 var transactionStates = ['initial', 'info', 'details', 'confirmation', 'cancelled', 'refund'];
 var transactionParams = {
     log: { 
@@ -68,12 +66,14 @@ var PaymentSchema = new Schema({
 	schemaVersion: {
 	    type: Number
 	}
+},{ 
+    timestamps: { updatedAt: 'updated' }
 });
 
 // TODO: Really need to have a sub(class/models) of the payment object per psp to extra
 // useful data from the psp responses
 
-// set amount on payments with no amount set (old payments);
+var schemaVersion = 2;
 PaymentSchema.pre('init', function(next, payment) {
     
     if (payment.schemaVersion === schemaVersion) { return next(); }
@@ -82,6 +82,7 @@ PaymentSchema.pre('init', function(next, payment) {
     try {
         switch(version) {
             case 0:
+                // set amount on payments with no amount set (old payments);
                 payment.amount = payment.transactions.initial.transactions[0].amount.total;
                 /* falls through */
             case 1:
@@ -101,7 +102,6 @@ PaymentSchema.pre('init', function(next, payment) {
         return next(err);
     }
     
-    payment.schemaVersion = schemaVersion;
     next();
 });
 

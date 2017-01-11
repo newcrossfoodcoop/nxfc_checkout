@@ -105,7 +105,12 @@ var OrderSchema = new Schema({
 	},
 	pickupId: {
 	    type: Schema.ObjectId
+	},
+	schemaVersion: {
+	    type: Number
 	}
+},{ 
+    timestamps: { updatedAt: 'updated' }
 });
 
 OrderSchema.methods.getPayment = function getPayment() {
@@ -161,10 +166,9 @@ OrderSchema.virtual('transactionFee').get(function () {
     },0);
 });
 
-OrderSchema.methods._calculate = function(products, lookedUp) {
+function _calculate(order, products, lookedUp) {
+    assert(typeof(order) === 'object', 'order should be an object');
     assert(typeof(products) === 'object', 'products lookup should be an object');
-
-    var order = this;
     
     var orderTotals = _(order.items)
         .map(function(item) {
@@ -222,13 +226,13 @@ OrderSchema.methods._calculate = function(products, lookedUp) {
     order.calculated = Date.now();
 
     return finalTotals;
-};
+}
 
 OrderSchema.methods.calculateWithoutLookup = function () {
     var order = this;
     var products = _.keyBy(order.items,'_product');
     
-    return order._calculate(products);
+    return _calculate(order, products);
 };
 
 OrderSchema.methods.calculate = function calculate() {
@@ -249,7 +253,7 @@ OrderSchema.methods.calculate = function calculate() {
 
         var products = _.keyBy(res.body,'_id');
         
-        return order._calculate(products, Date.now());
+        return _calculate(order, products, Date.now());
     });
 };
 
@@ -276,6 +280,45 @@ OrderSchema.pre('validate', function(next) {
         next();
     }
 
+});
+
+var schemaVersion = 1;
+OrderSchema.pre('init', function(next, data) {
+    var model = this;
+    
+    if (data.schemaVersion === schemaVersion) { return next(); }
+    
+    var version = data.schemaVersion || 0;
+    try {
+        switch(version) {
+            case 0:
+                if (!data.totals) {
+                    // calculate totals for older orders
+                    var products = _.keyBy(data.items,'_product');
+                    _calculate(data, products);
+                }
+                /* falls through */
+            default:
+                if (data.schemaVersion !== schemaVersion) {
+                    data.schemaVersion = schemaVersion;
+                }
+        }
+    } catch (err) {
+        return next(err);
+    }
+    
+    next();
+});
+
+OrderSchema.pre('save', function(next) {
+    var doc = this;
+    
+    // Set the schemaVersion for new documents only, init takes care of the rest
+    if (doc.isNew) {
+        doc.schemaVersion = schemaVersion;
+    }
+    
+    next();
 });
 
 OrderSchema.set('toJSON', { getters: true });
