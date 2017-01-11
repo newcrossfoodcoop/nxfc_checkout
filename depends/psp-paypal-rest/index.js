@@ -101,8 +101,8 @@ module.exports = function() {
     
     exports.refund = function refund(order, amount, callback) {
         var payment = order.getPayment();
-        var saleId = payment.transactions.confirmation.transactions[0].related_resources.sale.id;
-        var saleAmount = payment.transactions.confirmation.transactions[0].related_resources.sale.amount.total;
+        var saleId = payment.transactions.confirmation.transactions[0].related_resources[0].sale.id;
+        var saleAmount = payment.transactions.confirmation.transactions[0].related_resources[0].sale.amount.total;
         if (amount > saleAmount) {
             return callback(new Error('Refund too large for this sale'));
         }
