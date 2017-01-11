@@ -7,60 +7,50 @@
 var mongoose = require('mongoose');
 var assert = require('assert');
 var _ = require('lodash');
+var util = require('util');
 
 var	Order = mongoose.model('Order'),
 	Payment = mongoose.model('Payment');
+
+class PublicError extends Error {}
 
 /**
  * Get the error message from error object
  */
 var getErrorMessage = function(err) {
-	var message = '';
 
+    if (err instanceof PublicError) {
+        return err.message;
+    }
+    
+    if (err.name === 'AssertionError') {
+        return err.message;
+    }
+
+    // Mongoose
 	if (err.code) {
 		switch (err.code) {
 			case 11000:
 			case 11001:
-				message = 'Order already exists';
-				break;
+				return 'Order already exists';
 			default:
-				message = 'Something went wrong';
+				return 'Something went wrong';
 		}
-	} 
-	else if (err.errors) {
+	}
+	
+	// Mongoose
+	if (err.errors) {
+	    console.error(err.errors);
+	    var message = '';   
 		for (var errName in err.errors) {
 			if (err.errors[errName].message) { message = err.errors[errName].message; }
 		}
+		return message;
 	}
-	else {
-	    console.error(err.message);
-	    message = 'Internal Error';
-	}
-
-	return message;
+	
+    console.error(err.message);
+    return 'Internal Error';
 };
-
-/**
- * Create a Order
- */
-//exports.create = function(req, res) {
-//	var order = new Order(req.body);
-//	order.user = req.user;
-//	
-//	// orders can only be created in the new state and modifications are
-//	// managed through contoller methods (no bare updates)
-//    order.state = 'new'; 
-
-//	order.save(function(err) {
-//		if (err) {
-//			return res.send(400, {
-//				message: getErrorMessage(err)
-//			});
-//		} else {
-//			res.jsonp(order);
-//		}
-//	});
-//};
 
 /**
  * Show the current Order
@@ -132,9 +122,15 @@ exports.recalculateWithLookup = function(req, res) {
 exports.finalise = function(req, res) {
     var order = req.order;
     
+    if (order.state === 'finalised' || order.state === 'closed') {
+        // Nothing to do
+        res.jsonp(order);
+        return;
+    }
+    
     Promise.resolve()
         .then(() => { 
-            assert.equal(order.state, 'confirmed', 'Can only finalised confirmed orders'); 
+            assert.equal(order.state, 'confirmed', 'Can only finalise confirmed orders'); 
         })
         .then(() => {
             var items = req.body;
@@ -152,7 +148,7 @@ exports.finalise = function(req, res) {
                         orderItem.state = 'finalised';
                         break;
                     default:
-                        throw new Error('unrecognised action: ' + item.action);
+                        throw new PublicError('unrecognised action: ' + item.action);
                 }
             });
             
@@ -172,21 +168,24 @@ exports.finalise = function(req, res) {
                 } 
             });
             
-            if (remaining.length === 0 ) {
-                if (order.due === 0) {
-                    order.state = 'closed';
-                }
-                else {
-                    order.state = 'finalised';
-                }
+            if (remaining.length !== 0 ) {
+                console.error('Finalisation failed: ' + remaining);
+                throw new PublicError(util.format(
+                    'Cannot finalise %s, %s items in wrong state', order._id, remaining.length
+                ));
+            }
+            
+            if (order.due === 0) {
+                order.state = 'closed';
             }
             else {
-                console.error('Order not finalised: ' + order._id);
+                order.state = 'finalised';
             }
+
         })
         .then(() => { return order.save(); })
         .then(() => { res.jsonp(order); })
-        .catch((err) => { res.status(400).send({ message: err.message }); });
+        .catch((err) => { res.status(400).send({ message: getErrorMessage(err) }); });
 };
 
 /**

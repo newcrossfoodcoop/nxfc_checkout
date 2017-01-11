@@ -59,7 +59,7 @@ OrderItemSchema.virtual('total').get(function () { return this.totals.price; });
 
 OrderItemSchema.set('toJSON', { getters: true });
 OrderItemSchema.set('toObject', { getters: true });
-OrderItemSchema.set('timestamps', { updatedAt: 'updated' });
+OrderItemSchema.set('timestamps', { updatedAt: 'updated', createdAt: 'created'});
 
 /**
  * Order Schema
@@ -98,7 +98,6 @@ var OrderSchema = new Schema({
 	}],
 	user: {
 		type: Schema.ObjectId,
-		ref: 'User',
 		required: true
 	},
 	stockCheckoutId: {
@@ -114,7 +113,7 @@ var OrderSchema = new Schema({
 
 OrderSchema.set('toJSON', { getters: true });
 OrderSchema.set('toObject', { getters: true });
-OrderSchema.set('timestamps', { updatedAt: 'updated' });
+OrderSchema.set('timestamps', { updatedAt: 'updated', createdAt: 'created'});
 
 OrderSchema.methods.getPayment = function getPayment() {
     return this.payments[this.payments.length - 1];
@@ -287,32 +286,34 @@ OrderSchema.pre('validate', function(next) {
 });
 
 var schemaVersion = 1;
-OrderSchema.pre('init', function(next, data) {
-    var model = this;
+OrderSchema.post('init', function() {
+    var order = this;
     
-    if (data.schemaVersion === schemaVersion) { return next(); }
+    if (order.schemaVersion === schemaVersion) { return; }
     
-    var version = data.schemaVersion || 0;
+    var version = order.schemaVersion || 0;
     try {
         switch(version) {
             case 0:
-                if (!data.totals) {
+                if (!order.totals) {
                     // calculate totals for older orders
-                    var products = _.keyBy(data.items,'_product');
+                    var products = _.keyBy(order.items,'_product');
                     _calculate(data, products);
-                    data.user = '1a1a1a1a1a1a1a1a1a1a0000';
+                }
+                if (!order.user) {
+                    order.user = '1a1a1a1a1a1a1a1a1a1a0000';
                 }
                 /* falls through */
             default:
-                if (data.schemaVersion !== schemaVersion) {
-                    data.schemaVersion = schemaVersion;
+                if (order.schemaVersion !== schemaVersion) {
+                    order.schemaVersion = schemaVersion;
                 }
         }
     } catch (err) {
-        return next(err);
+        console.error(err);
+        throw new Error('OrderSchema Update Error: ' + err.message);
     }
-    
-    next();
+
 });
 
 OrderSchema.pre('save', function(next) {

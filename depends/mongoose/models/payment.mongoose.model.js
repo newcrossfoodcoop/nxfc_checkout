@@ -67,16 +67,17 @@ var PaymentSchema = new Schema({
 	    type: Number
 	}
 },{ 
-    timestamps: { updatedAt: 'updated' }
+    timestamps: { updatedAt: 'updated', createdAt: 'created' }
 });
 
 // TODO: Really need to have a sub(class/models) of the payment object per psp to extra
 // useful data from the psp responses
 
 var schemaVersion = 2;
-PaymentSchema.pre('init', function(next, payment) {
+PaymentSchema.post('init', function() {
+    var payment = this;
     
-    if (payment.schemaVersion === schemaVersion) { return next(); }
+    if (payment.schemaVersion === schemaVersion) { return; }
     
     var version = payment.schemaVersion || 0;
     try {
@@ -90,7 +91,7 @@ PaymentSchema.pre('init', function(next, payment) {
                     payment.transactionFee = payment.transactions.confirmation.transactions[0].related_resources[0].sale.transaction_fee.value;
                 }
                 catch(err) {
-                    console.error('schema update skipped error: ' + err.message);
+                    console.error('PaymentSchema update skipped error: ' + err.message);
                 }
                 /* falls through */
             default:
@@ -99,10 +100,10 @@ PaymentSchema.pre('init', function(next, payment) {
                 }
         }
     } catch (err) {
-        return next(err);
+        console.error(err);
+        throw new Error('PaymentSchema Update Error: ' + err.message);
     }
     
-    next();
 });
 
 PaymentSchema.pre('save', function(next) {

@@ -208,11 +208,11 @@ exports.confirm = function(req, res) {
         },
         function(callback) {
             subController.capturePayment(order,callback);
-            console.log('capturePayment started');
+            debug('capturePayment started');
         },
         function(data,callback) {
             order.getPayment().recordTransaction('confirmation',data,callback);
-            console.log('record transaction started');
+            debug('record transaction started');
         },
         function(_payment,n,callback) {
 //            order.paid = order.paid + _payment.amount;
@@ -231,7 +231,7 @@ exports.confirm = function(req, res) {
             _.each(order.items,(item) => { item.state = 'reserved'; });
             order.state = 'confirmed';
             order.save(callback);
-            console.log('order save started');
+            debug('order save started');
         }
     ],
     function(err,result) {
