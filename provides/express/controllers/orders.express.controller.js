@@ -26,10 +26,15 @@ var getErrorMessage = function(err) {
 			default:
 				message = 'Something went wrong';
 		}
-	} else {
+	} 
+	else if (err.errors) {
 		for (var errName in err.errors) {
-			if (err.errors[errName].message) message = err.errors[errName].message;
+			if (err.errors[errName].message) { message = err.errors[errName].message; }
 		}
+	}
+	else {
+	    console.error(err.message);
+	    message = 'Internal Error';
 	}
 
 	return message;
@@ -111,7 +116,7 @@ exports.recalculate = function(req, res) {
     order
         .save()
         .then(() => { res.jsonp(order); })
-        .catch((err) => { res.status(400).send(err.message); });
+        .catch((err) => { res.status(400).send({message: getErrorMessage(err) }); });
 };
 
 exports.recalculateWithLookup = function(req, res) {
@@ -121,7 +126,7 @@ exports.recalculateWithLookup = function(req, res) {
         .calculate()
         .then(() => { return order.save(); })
         .then(() => { res.jsonp(order); })
-        .catch((err) => { res.status(400).send(err.message); });
+        .catch((err) => { res.status(400).send({message: getErrorMessage(err) }); });
 };
 
 exports.finalise = function(req, res) {

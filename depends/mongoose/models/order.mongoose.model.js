@@ -59,6 +59,7 @@ OrderItemSchema.virtual('total').get(function () { return this.totals.price; });
 
 OrderItemSchema.set('toJSON', { getters: true });
 OrderItemSchema.set('toObject', { getters: true });
+OrderItemSchema.set('timestamps', { updatedAt: 'updated' });
 
 /**
  * Order Schema
@@ -109,9 +110,11 @@ var OrderSchema = new Schema({
 	schemaVersion: {
 	    type: Number
 	}
-},{ 
-    timestamps: { updatedAt: 'updated' }
 });
+
+OrderSchema.set('toJSON', { getters: true });
+OrderSchema.set('toObject', { getters: true });
+OrderSchema.set('timestamps', { updatedAt: 'updated' });
 
 OrderSchema.methods.getPayment = function getPayment() {
     return this.payments[this.payments.length - 1];
@@ -297,6 +300,7 @@ OrderSchema.pre('init', function(next, data) {
                     // calculate totals for older orders
                     var products = _.keyBy(data.items,'_product');
                     _calculate(data, products);
+                    data.user = '1a1a1a1a1a1a1a1a1a1a0000';
                 }
                 /* falls through */
             default:
@@ -321,9 +325,6 @@ OrderSchema.pre('save', function(next) {
     
     next();
 });
-
-OrderSchema.set('toJSON', { getters: true });
-OrderSchema.set('toObject', { getters: true });
 
 var Order = mongoose.model('Order', OrderSchema);
 var OrderItem = mongoose.model('OrderItem', OrderItemSchema);
