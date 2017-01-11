@@ -265,14 +265,15 @@ OrderSchema.pre('validate', function(next) {
         order
             .calculate()
             .then(() => { next(); })
-            .catch(next);
+            .catch((err) => { next(err); });
     }
     else if (order.isModified('items')) {
         try {
             order.calculateWithoutLookup();
             next();
         }
-        catch (err) { 
+        catch (err) {
+            console.error('Item calculation: ',err);
             next(err); 
         }
     }
