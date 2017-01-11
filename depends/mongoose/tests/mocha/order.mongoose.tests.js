@@ -94,15 +94,12 @@ describe('Order Model Unit Tests:', () => {
     });
     
     describe('Init', () => {
-        it('should be able to set schemaVersion', () => {
-            return order.init(order.toObject())
-                .then(() => {
-                    order.totals.should.be.type('object');
-                })
-                .then(() => {
-                    // Expect to update the value on schemaVersion change                
-                    order.schemaVersion.should.equal(1);
-                });
+        it('should be able to set schemaVersion', (done) => {
+            order.init(order.toObject());
+            order.totals.should.be.type('object');
+            // Expect to update the value on schemaVersion change                
+            order.schemaVersion.should.equal(1);
+            done();
         });
     });
 

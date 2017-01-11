@@ -298,7 +298,7 @@ OrderSchema.post('init', function() {
                 if (!order.totals) {
                     // calculate totals for older orders
                     var products = _.keyBy(order.items,'_product');
-                    _calculate(data, products);
+                    _calculate(order, products);
                 }
                 if (!order.user) {
                     order.user = '1a1a1a1a1a1a1a1a1a1a0000';
