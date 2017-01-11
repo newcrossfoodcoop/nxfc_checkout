@@ -107,8 +107,11 @@ exports.history = function(req, res, next) {
 exports.recalculate = function(req, res) {
     var order = req.order;
     
-    order.calculateWithoutLookup();
-    res.jsonp(order);
+    order
+        .calculateWithoutLookup()
+        .then(() => { order.save(); });
+        .then(() => { res.jsonp(order); })
+        .catch((err) => { res.status(400).send(err.message); });
 };
 
 exports.recalculateWithLookup = function(req, res) {
@@ -116,6 +119,7 @@ exports.recalculateWithLookup = function(req, res) {
     
     order
         .calculate()
+        .then(() => { return order.save(); })
         .then(() => { res.jsonp(order); })
         .catch((err) => { res.status(400).send(err.message); });
 };
