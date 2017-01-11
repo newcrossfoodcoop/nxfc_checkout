@@ -107,9 +107,9 @@ exports.history = function(req, res, next) {
 exports.recalculate = function(req, res) {
     var order = req.order;
     
+    order.calculateWithoutLookup();
     order
-        .calculateWithoutLookup()
-        .then(() => { order.save(); });
+        .save()
         .then(() => { res.jsonp(order); })
         .catch((err) => { res.status(400).send(err.message); });
 };

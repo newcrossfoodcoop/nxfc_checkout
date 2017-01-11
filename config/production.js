@@ -11,5 +11,10 @@ module.exports = {
         'psp-local': {
             active: false
         } 
-    }
+    },
+    provides: {
+	    express: {
+	        logging: 'combined'
+	    }
+	}
 };

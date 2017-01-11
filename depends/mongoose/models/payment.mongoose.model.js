@@ -66,8 +66,7 @@ var PaymentSchema = new Schema({
 		default: Date.now
 	},
 	schemaVersion: {
-	    type: Number,
-	    default: schemaVersion
+	    type: Number
 	}
 });
 
@@ -75,8 +74,8 @@ var PaymentSchema = new Schema({
 // useful data from the psp responses
 
 // set amount on payments with no amount set (old payments);
-PaymentSchema.pre('init', function(next) {
-    var payment = this;
+PaymentSchema.pre('init', function(next, payment) {
+    
     if (payment.schemaVersion === schemaVersion) { return next(); }
     
     var version = payment.schemaVersion || 0;
@@ -101,6 +100,17 @@ PaymentSchema.pre('init', function(next) {
     }
     
     payment.schemaVersion = schemaVersion;
+    next();
+});
+
+PaymentSchema.pre('save', function(next) {
+    var payment = this;
+    
+    // Set the schemaVersion for new documents only, init takes care of the rest
+    if (payment.isNew) {
+        payment.schemaVersion = schemaVersion;
+    }
+    
     next();
 });
 
