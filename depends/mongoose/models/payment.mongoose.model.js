@@ -85,9 +85,11 @@ PaymentSchema.pre('init', function(next, payment) {
                 payment.amount = payment.transactions.initial.transactions[0].amount.total;
                 /* falls through */
             case 1:
-                if (payment.transactions.confirmation && payment.transactions.confirmation.transactions[0]) {
-                    var txn = payment.transactions.confirmation.transactions[0];
-                    payment.transactionFee = txn.related_resources.sale.transaction_fee.value;
+                try {
+                    payment.transactionFee = payment.transactions.confirmation.transactions[0].related_resources.sale.transaction_fee.value;
+                }
+                catch(err) {
+                    console.error('schema update skipped error: ' + err.message);
                 }
                 /* falls through */
             default:
