@@ -205,7 +205,7 @@ exports.orderByID = function(req, res, next, id) {
 };
 
 exports.ordersByUserID = function(req, res, next, id) {
-    Order.find({state: { $ne: 'deleted' }, user: id })
+    Order.find({state: { $nin: ['new','submitted','cancelled','deleted'] }, user: id })
 //        .select('payments')
         .sort('-created')
         .populate('payments')
