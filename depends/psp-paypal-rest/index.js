@@ -6,6 +6,8 @@ var path = require('path'),
     paypal = require('paypal-rest-sdk'),
     url = require('url'),
     _ = require('lodash');
+    
+var debug = require('debug')('depends:psp-paypal-rest');
 
 var defer = require('config/defer').deferConfig;
 
@@ -60,20 +62,20 @@ module.exports = function() {
                     'currency': 'GBP',
                 },
                 'description': 'Payment for goods from website',
-                'item_list': [{
-                    'items': _.map(order.items, (item) => { return {
-                        quantity: item.quantity,
-                        name: item.name,
-                        price: item.totals.price
-                    }; }) 
-                }] 
+//                'item_list': [{
+//                    'items': _.map(order.items, (item) => { return {
+//                        quantity: item.quantity,
+//                        name: item.name,
+//                        price: item.totals.price
+//                    }; }) 
+//                }] 
             }],
             'redirect_urls': {
                 return_url: util.format(config.returnUrl, order._id),
                 cancel_url: util.format(config.cancelUrl, order._id),
             }
         };
-        
+        debug(params);
         paypal.payment.create(params, callback);
     };
 
