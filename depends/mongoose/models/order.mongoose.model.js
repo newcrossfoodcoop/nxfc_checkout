@@ -237,7 +237,7 @@ OrderSchema.methods.calculateWithoutLookup = function () {
     return _calculate(order, products);
 };
 
-OrderSchema.methods.calculate = function calculate() {
+OrderSchema.methods.calculate = function calculate(options) {
     var order = this;
 
     var ids = _(order.items)
@@ -253,7 +253,16 @@ OrderSchema.methods.calculate = function calculate() {
         
         debug(res.body);
 
-        var products = _.keyBy(res.body,'_id');
+        var products = null;
+        if (options.rejectUnpublished) {
+            products = _(res.body)
+                .filter('published')
+                .keyBy('_id')
+                .valueOf();
+        }
+        else {
+            products = _.keyBy(res.body,'_id');
+        }
         
         return _calculate(order, products, Date.now());
     });
@@ -265,7 +274,7 @@ OrderSchema.pre('validate', function(next) {
 
     if (order.isNew) {
         order
-            .calculate()
+            .calculate({ rejectUnpublished: true })
             .then(() => { next(); })
             .catch((err) => { next(err); });
     }
