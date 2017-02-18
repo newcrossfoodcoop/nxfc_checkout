@@ -24,7 +24,8 @@ orderModel.__set__({
                     supplierPrice: counter + 10,
                     margin: counter * 0.1,
                     price: counter + 10 + 3,
-                    descName: 'Product Name'
+                    descName: 'Product Name',
+                    published: true
                 }; 
             });
             return Promise.resolve({ status: 200, body: items });

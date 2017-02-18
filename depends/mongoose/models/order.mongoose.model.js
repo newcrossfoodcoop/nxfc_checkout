@@ -238,6 +238,7 @@ OrderSchema.methods.calculateWithoutLookup = function () {
 };
 
 OrderSchema.methods.calculate = function calculate(options) {
+    options = options || {};
     var order = this;
 
     var ids = _(order.items)
