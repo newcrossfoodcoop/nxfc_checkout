@@ -215,6 +215,9 @@ exports.confirm = function(req, res) {
             debug('record transaction started');
         },
         function(_payment,n,callback) {
+            subController.setTransactionFee(order, callback);  
+        },
+        function(_payment,n,callback) {
 //            order.paid = order.paid + _payment.amount;
             order.state = 'paid';
             order.save(callback);

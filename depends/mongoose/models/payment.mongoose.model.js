@@ -73,7 +73,7 @@ var PaymentSchema = new Schema({
 // TODO: Really need to have a sub(class/models) of the payment object per psp to extra
 // useful data from the psp responses
 
-var schemaVersion = 2;
+var schemaVersion = 3;
 PaymentSchema.post('init', function() {
     var payment = this;
     
@@ -86,7 +86,7 @@ PaymentSchema.post('init', function() {
                 // set amount on payments with no amount set (old payments);
                 payment.amount = payment.transactions.initial.transactions[0].amount.total;
                 /* falls through */
-            case 1:
+            case 2:
                 try {
                     payment.transactionFee = payment.transactions.confirmation.transactions[0].related_resources[0].sale.transaction_fee.value;
                 }
@@ -143,13 +143,17 @@ PaymentSchema.set('toJSON', { getters: true });
 PaymentSchema.set('toObject', { getters: true });
 
 PaymentSchema.methods.recordTransaction = function(name, content, callback) {
-    this.transactions[name] = content;
-    this.transactions.log.push({ 'name': name });
-    this.state = name;
-    this.markModified('transactions');
-    this.markModified('transactions.' + name);
-    this.markModified('transactions.log');
-    this.save(callback);
+    var payment = this;
+
+    payment.transactions[name] = content;
+    payment.transactions.log.push({ 'name': name });
+    payment.state = name;
+    
+    payment.markModified('transactions');
+    payment.markModified('transactions.' + name);
+    payment.markModified('transactions.log');
+    
+    payment.save(callback);
 };
 
 var Payment = mongoose.model('Payment', PaymentSchema);

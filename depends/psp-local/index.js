@@ -85,6 +85,12 @@ module.exports = function() {
         });
     };
     
+    exports.setTransactionFee = function setTranscationFee(order,callback) {
+        var payment = order.getPayment();
+        payment.transactionFee = order.total * 0.05;
+        payment.save(callback);
+    }
+    
     exports.refund = function refund(order, amount, callback) {
         var payment = order.getPayment();
         var paymentId = payment.transactions.initial._id;

@@ -101,6 +101,12 @@ module.exports = function() {
         paypal.payment.execute(paypalPaymentId, {payer_id: payment.transactions.info.PayerID}, callback);
     };
     
+    exports.setTransactionFee = function setTranscationFee(order,callback) {
+        var payment = order.getPayment();
+        payment.transactionFee = payment.transactions.confirmation.transactions[0].related_resources[0].sale.transaction_fee.value;
+        payment.save(callback);
+    }
+    
     exports.refund = function refund(order, amount, callback) {
         var payment = order.getPayment();
         var saleId = payment.transactions.confirmation.transactions[0].related_resources[0].sale.id;
