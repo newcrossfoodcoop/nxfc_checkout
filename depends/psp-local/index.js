@@ -89,7 +89,7 @@ module.exports = function() {
         var payment = order.getPayment();
         payment.transactionFee = order.total * 0.05;
         payment.save(callback);
-    }
+    };
     
     exports.refund = function refund(order, amount, callback) {
         var payment = order.getPayment();

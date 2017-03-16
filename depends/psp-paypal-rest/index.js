@@ -105,7 +105,7 @@ module.exports = function() {
         var payment = order.getPayment();
         payment.transactionFee = payment.transactions.confirmation.transactions[0].related_resources[0].sale.transaction_fee.value;
         payment.save(callback);
-    }
+    };
     
     exports.refund = function refund(order, amount, callback) {
         var payment = order.getPayment();
